@@ -117,3 +117,15 @@ curl -X POST "http://localhost:8000/generate" \
 | 阶段三 | 接入 LLM | 替换 `mock_llm_extract()`，接入 Claude API 提取字段 |
 | 阶段四 | 前端录音页面 | 浏览器 MediaRecorder 录音 → 上传 → 显示字段确认 → 下载合同 |
 | 阶段五 | 历史分析 | 合同入库 + 金额异常提示 + 到期提醒 |
+
+
+# 运行
+```
+STT_BACKEND=local WHISPER_MODEL=tiny uvicorn main:app --reload --port 8000
+
+
+set STT_BACKEND=local
+set WHISPER_MODEL=tiny
+set WHISPER_DEVICE=cpu
+uvicorn main:app --reload --port 8000
+```

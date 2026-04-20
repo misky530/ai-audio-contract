@@ -1,21 +1,25 @@
-# main.py  —  语音合同生成 Demo（IT设备供货商版）
+# main.py  —  语音合同生成（阶段二：接入 STT）
 
-from fastapi import FastAPI, HTTPException
+import os, urllib.parse, logging
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import urllib.parse
 
 from contract import generate_contract, list_templates
 from mock_data import VOICE_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VOICE_INPUT, auto_generate
-from vocab import get_prompt, FIELD_PROMPTS
+from vocab import get_prompt
+from stt import transcribe_bytes, STT_BACKEND
 
-app = FastAPI(title="语音合同生成 Demo", version="0.2.0")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="语音合同生成", version="0.3.0")
 
 
+# ── Schema ────────────────────────────────────────────────────────────
 class VoiceInput(BaseModel):
     contract_type: str = "采购合同"
-    voice_data: dict   # 只传用户说的那几个字段
-
+    voice_data: dict
     model_config = {
         "json_schema_extra": {
             "example": {
@@ -26,47 +30,70 @@ class VoiceInput(BaseModel):
     }
 
 
+# ── 基础接口 ──────────────────────────────────────────────────────────
 @app.get("/", summary="服务状态")
 def root():
-    return {"status": "ok", "version": "0.2.0"}
+    return {"status": "ok", "version": "0.3.0", "stt_backend": STT_BACKEND}
 
-
-@app.get("/templates", summary="可用合同类型")
+@app.get("/templates")
 def get_templates():
     return {"templates": list_templates()}
 
-
 @app.get("/fields", summary="语音输入字段清单")
 def get_fields():
-    """返回用户需要语音说的字段（9个），以及对应的引导提示和词库 key"""
     return {
         "voice_fields": VOICE_FIELDS,
-        "our_company":  OUR_COMPANY,   # 乙方预填，前端可展示给用户确认
-        "defaults":     DEFAULTS,       # 标准条款，前端可以折叠展示
+        "our_company":  OUR_COMPANY,
+        "defaults":     DEFAULTS,
         "total_voice":  len(VOICE_FIELDS),
     }
 
-
-@app.get("/vocab/{field_key}", summary="获取某字段的 Whisper 词库")
+@app.get("/vocab/{field_key}", summary="获取字段的 Whisper 词库")
 def get_vocab(field_key: str):
-    """前端在录制某字段音频前，调用此接口获取 initial_prompt，传给 STT 服务"""
     prompt = get_prompt(field_key)
+    return {"field_key": field_key, "prompt": prompt, "length": len(prompt)}
+
+
+# ── 核心：单字段语音转文字 ────────────────────────────────────────────
+@app.post("/transcribe/{field_key}", summary="上传单字段音频，返回识别文字")
+async def transcribe_field(
+    field_key:  str,
+    audio:      UploadFile = File(..., description="音频文件 wav/mp3/m4a/webm"),
+    language:   str = Form("zh"),
+):
+    """
+    前端逐字段录音后调用此接口。
+    - field_key: 当前录的是哪个字段（用于自动匹配词库）
+    - 返回识别出的文字，前端展示给用户确认后再调 /generate
+    """
+    # 获取该字段的专用词库
+    prompt = get_prompt(field_key)
+
+    # 读取音频并转录
+    audio_bytes = await audio.read()
+    suffix = "." + (audio.filename or "audio.wav").rsplit(".", 1)[-1]
+
+    try:
+        text = transcribe_bytes(audio_bytes, suffix=suffix, language=language, prompt=prompt)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"STT 失败: {e}")
+        raise HTTPException(status_code=500, detail=f"STT 识别失败: {e}")
+
     return {
         "field_key": field_key,
-        "prompt": prompt,
-        "prompt_length": len(prompt),
+        "text":      text,
+        "prompt_used": bool(prompt),
+        "backend":   STT_BACKEND,
     }
 
 
-@app.post("/generate", summary="传入语音字段，生成合同并下载")
+# ── 生成合同 ──────────────────────────────────────────────────────────
+@app.post("/generate", summary="传入字段数据，生成合同文件")
 def generate(req: VoiceInput):
-    """
-    只需传用户说的字段（voice_data），其余自动补全：
-    - 乙方信息：系统预填
-    - 合同金额大写、税额、预付款等：自动计算
-    - 货物名称：由品类+品牌+型号+规格自动拼合
-    - 合同编号、签署日期：自动生成
-    """
     fields = auto_generate(req.voice_data)
     try:
         buf = generate_contract(req.contract_type, fields)
@@ -82,7 +109,7 @@ def generate(req: VoiceInput):
     )
 
 
-@app.post("/generate/mock", summary="用 mock 数据一键生成（测试）")
+@app.post("/generate/mock", summary="mock 数据一键生成（测试）")
 def generate_mock(contract_type: str = "采购合同"):
     fields = auto_generate(MOCK_VOICE_INPUT)
     try:
@@ -99,7 +126,6 @@ def generate_mock(contract_type: str = "采购合同"):
     )
 
 
-@app.get("/preview/mock", summary="预览 mock 数据生成的完整字段（不下载文件）")
+@app.get("/preview/mock", summary="预览 mock 生成的完整字段")
 def preview_mock():
-    """查看 auto_generate 生成的完整字段，验证自动计算是否正确"""
     return auto_generate(MOCK_VOICE_INPUT)
