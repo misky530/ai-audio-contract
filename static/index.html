@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>语音合同生成</title>
+<style>
+  :root {
+    --blue:   #1677ff;
+    --green:  #52c41a;
+    --red:    #ff4d4f;
+    --gray:   #8c8c8c;
+    --bg:     #f5f5f5;
+    --card:   #ffffff;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+         background: var(--bg); color: #262626; min-height: 100dvh; }
+
+  /* ── 顶部进度条 ── */
+  .topbar { background: var(--blue); color: #fff; padding: 14px 16px 10px;
+            position: sticky; top: 0; z-index: 10; }
+  .topbar h1 { font-size: 17px; font-weight: 600; }
+  .progress-wrap { margin-top: 8px; background: rgba(255,255,255,.3);
+                   border-radius: 4px; height: 4px; overflow: hidden; }
+  .progress-bar  { height: 100%; background: #fff;
+                   transition: width .3s; border-radius: 4px; }
+  .step-label { font-size: 12px; margin-top: 4px; opacity: .85; }
+
+  /* ── 卡片 ── */
+  .card { background: var(--card); border-radius: var(--radius);
+          margin: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+  /* ── 字段页 ── */
+  .field-label { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .field-hint  { font-size: 13px; color: var(--gray); margin-bottom: 20px;
+                 line-height: 1.5; }
+  .tts-btn { background: none; border: none; color: var(--blue);
+             font-size: 13px; cursor: pointer; margin-bottom: 16px;
+             display: flex; align-items: center; gap: 4px; }
+
+  /* ── 录音按钮 ── */
+  .rec-area { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .rec-btn  { width: 80px; height: 80px; border-radius: 50%;
+              border: none; cursor: pointer; font-size: 32px;
+              display: flex; align-items: center; justify-content: center;
+              transition: transform .15s, box-shadow .15s;
+              background: var(--blue); box-shadow: 0 4px 12px rgba(22,119,255,.4); }
+  .rec-btn.recording { background: var(--red);
+                        box-shadow: 0 4px 16px rgba(255,77,79,.5);
+                        animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+  }
+  .rec-status { font-size: 13px; color: var(--gray); }
+  .rec-status.active { color: var(--red); font-weight: 500; }
+
+  /* ── 识别结果输入框 ── */
+  .result-box { width: 100%; margin-top: 16px; }
+  .result-box label { font-size: 13px; color: var(--gray); display: block;
+                      margin-bottom: 6px; }
+  .result-box input { width: 100%; border: 1px solid #d9d9d9; border-radius: 8px;
+                       padding: 10px 12px; font-size: 15px; outline: none;
+                       transition: border-color .2s; }
+  .result-box input:focus { border-color: var(--blue); }
+
+  /* ── 导航按钮 ── */
+  .nav-row { display: flex; gap: 10px; margin-top: 20px; }
+  .btn { flex: 1; padding: 13px; border: none; border-radius: 10px;
+         font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+  .btn:active { opacity: .75; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-ghost   { background: #f0f0f0; color: #595959; }
+
+  /* ── 汇总确认页 ── */
+  .summary-title { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
+  .field-row { display: flex; justify-content: space-between; align-items: flex-start;
+               padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .key   { font-size: 13px; color: var(--gray); flex-shrink: 0; width: 90px; }
+  .field-row .value { font-size: 14px; color: #262626; text-align: right; flex: 1; word-break: break-all; }
+  .field-row .edit-link { font-size: 12px; color: var(--blue); margin-left: 8px;
+                           flex-shrink: 0; cursor: pointer; }
+
+  /* ── 成功页 ── */
+  .success-wrap { text-align: center; padding: 40px 16px; }
+  .success-icon { font-size: 64px; margin-bottom: 16px; }
+  .success-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .success-sub   { font-size: 14px; color: var(--gray); margin-bottom: 28px; }
+
+  /* ── Loading ── */
+  .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45);
+                      display: flex; flex-direction: column; align-items: center;
+                      justify-content: center; z-index: 100; gap: 14px; color: #fff; }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.3);
+             border-top-color: #fff; border-radius: 50%;
+             animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- 顶部进度条 -->
+<div class="topbar">
+  <h1>语音采购合同</h1>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="step-label" id="stepLabel"></div>
+</div>
+
+<!-- 录音页 -->
+<div id="pageRecord">
+  <div class="card">
+    <div class="field-label" id="fieldLabel"></div>
+    <div class="field-hint"  id="fieldHint"></div>
+    <button class="tts-btn" id="ttsBtn" onclick="speakHint()">🔊 朗读提示</button>
+
+    <div class="rec-area">
+      <button class="rec-btn" id="recBtn" onclick="toggleRecord()">🎤</button>
+      <div class="rec-status" id="recStatus">点击麦克风开始录音</div>
+    </div>
+
+    <div class="result-box">
+      <label>识别结果（可手动修改）</label>
+      <input type="text" id="resultInput" placeholder="录音后自动填入…">
+    </div>
+  </div>
+
+  <div style="margin: 0 16px;">
+    <div class="nav-row">
+      <button class="btn btn-ghost"   onclick="goPrev()">← 上一项</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="goNext()">下一项 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 汇总确认页 -->
+<div id="pageSummary" class="hidden">
+  <div class="card">
+    <div class="summary-title">确认合同信息</div>
+    <div id="summaryList"></div>
+  </div>
+  <div style="margin: 0 16px 24px;">
+    <button class="btn btn-primary" style="width:100%;font-size:16px;" onclick="doGenerate()">
+      生成合同并下载
+    </button>
+  </div>
+</div>
+
+<!-- 成功页 -->
+<div id="pageSuccess" class="hidden">
+  <div class="success-wrap">
+    <div class="success-icon">✅</div>
+    <div class="success-title">合同已生成</div>
+    <div class="success-sub">文件已开始下载，请在通知栏查看</div>
+    <button class="btn btn-primary" style="width:100%;" onclick="restart()">重新录入</button>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay hidden" id="loading">
+  <div class="spinner"></div>
+  <div id="loadingText">识别中…</div>
+</div>
+
+<script>
+// ── 配置：后端地址（同源，不需要改）─────────────────────────────────
+const API = '';   // 空字符串 = 同域，前端由后端 /static 服务时自动正确
+
+// ── 字段定义（从后端 /fields 拉取，此处写死作为备用）────────────────
+const VOICE_FIELDS = [
+  { key: '甲方名称',     label: '甲方公司名称',   hint: '请说出对方公司全称，例如：北京星辰科技有限公司' },
+  { key: '甲方联系人',   label: '甲方联系人姓名', hint: '请说出对方联系人姓名，例如：张伟' },
+  { key: '甲方电话',     label: '甲方联系电话',   hint: '请逐字说出电话号码，例如：一三八零零一三八零零零' },
+  { key: '货物品类',     label: '货物品类',       hint: '请说出设备类型，例如：笔记本电脑、服务器、交换机' },
+  { key: '货物品牌',     label: '货物品牌',       hint: '请说出品牌名称，例如：联想、戴尔、华为' },
+  { key: '货物型号',     label: '货物型号',       hint: '请说出具体型号，例如：ThinkPad X1 Carbon Gen12' },
+  { key: '货物规格',     label: '货物规格配置',   hint: '请说出主要配置，例如：十六G内存 五百一十二G固态' },
+  { key: '数量',         label: '采购数量',       hint: '请说出数量和单位，例如：五十台' },
+  { key: '合同金额数字', label: '合同总金额（元）',hint: '请说出合同金额，例如：四十九万元整' },
+];
+
+// ── 状态 ──────────────────────────────────────────────────────────────
+let currentIndex = 0;
+let answers      = {};        // { field_key: text }
+let mediaRec     = null;
+let audioChunks  = [];
+let isRecording  = false;
+
+// ── 初始化 ────────────────────────────────────────────────────────────
+function init() {
+  // 尝试从后端拉取字段，失败则用内置
+  fetch(API + '/fields')
+    .then(r => r.json())
+    .then(data => {
+      if (data.voice_fields && data.voice_fields.length) {
+        VOICE_FIELDS.length = 0;
+        data.voice_fields.forEach(f => VOICE_FIELDS.push(f));
+      }
+    })
+    .catch(() => {})
+    .finally(() => renderField(0));
+}
+
+// ── 渲染字段 ──────────────────────────────────────────────────────────
+function renderField(idx) {
+  currentIndex = idx;
+  const f = VOICE_FIELDS[idx];
+  const total = VOICE_FIELDS.length;
+
+  document.getElementById('progressBar').style.width = `${(idx / total) * 100}%`;
+  document.getElementById('stepLabel').textContent   = `第 ${idx + 1} 项 / 共 ${total} 项`;
+  document.getElementById('fieldLabel').textContent  = f.label;
+  document.getElementById('fieldHint').textContent   = f.hint;
+  document.getElementById('resultInput').value       = answers[f.key] || '';
+  document.getElementById('recStatus').textContent   = '点击麦克风开始录音';
+  document.getElementById('recStatus').className     = 'rec-status';
+  document.getElementById('recBtn').className        = 'rec-btn';
+
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.textContent = idx === total - 1 ? '完成，确认信息 →' : '下一项 →';
+
+  showPage('pageRecord');
+  speakHint();
+}
+
+// ── TTS 朗读提示 ──────────────────────────────────────────────────────
+function speakHint() {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(VOICE_FIELDS[currentIndex].hint);
+  utter.lang = 'zh-CN';
+  utter.rate = 0.9;
+  window.speechSynthesis.speak(utter);
+}
+
+// ── 录音控制 ──────────────────────────────────────────────────────────
+async function toggleRecord() {
+  if (isRecording) {
+    stopRecord();
+  } else {
+    await startRecord();
+  }
+}
+
+async function startRecord() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    const mimeType = getSupportedMime();
+    mediaRec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    mediaRec.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRec.onstop = () => { stream.getTracks().forEach(t => t.stop()); uploadAudio(); };
+    mediaRec.start();
+    isRecording = true;
+    document.getElementById('recBtn').className    = 'rec-btn recording';
+    document.getElementById('recBtn').textContent  = '⏹';
+    document.getElementById('recStatus').textContent = '录音中… 点击停止';
+    document.getElementById('recStatus').className  = 'rec-status active';
+  } catch (err) {
+    alert('无法访问麦克风：' + err.message + '\n请确保使用 HTTPS 或 localhost 访问。');
+  }
+}
+
+function stopRecord() {
+  if (mediaRec && isRecording) {
+    mediaRec.stop();
+    isRecording = false;
+  }
+}
+
+function getSupportedMime() {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+
+// ── 上传音频识别 ──────────────────────────────────────────────────────
+async function uploadAudio() {
+  const fieldKey = VOICE_FIELDS[currentIndex].key;
+  const mime     = audioChunks[0]?.type || 'audio/webm';
+  const ext      = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'mp4' : 'webm';
+  const blob     = new Blob(audioChunks, { type: mime });
+
+  const form = new FormData();
+  form.append('audio', blob, `audio.${ext}`);
+  form.append('language', 'zh');
+
+  showLoading('识别中…');
+  try {
+    const resp = await fetch(`${API}/transcribe/${encodeURIComponent(fieldKey)}`, {
+      method: 'POST', body: form,
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || resp.statusText);
+    document.getElementById('resultInput').value = data.text || '';
+    document.getElementById('recBtn').textContent = '🎤';
+    document.getElementById('recStatus').textContent = '识别完成，可修改后继续';
+    document.getElementById('recStatus').className   = 'rec-status';
+  } catch (err) {
+    alert('识别失败：' + err.message);
+    document.getElementById('recBtn').textContent = '🎤';
+    document.getElementById('recStatus').textContent = '识别失败，请重录';
+    document.getElementById('recStatus').className   = 'rec-status';
+  } finally {
+    hideLoading();
+  }
+}
+
+// ── 导航 ──────────────────────────────────────────────────────────────
+function saveCurrentAnswer() {
+  const key = VOICE_FIELDS[currentIndex].key;
+  const val = document.getElementById('resultInput').value.trim();
+  if (val) answers[key] = val;
+}
+
+function goPrev() {
+  saveCurrentAnswer();
+  if (currentIndex > 0) renderField(currentIndex - 1);
+}
+
+function goNext() {
+  saveCurrentAnswer();
+  if (currentIndex < VOICE_FIELDS.length - 1) {
+    renderField(currentIndex + 1);
+  } else {
+    showSummary();
+  }
+}
+
+// ── 汇总页 ────────────────────────────────────────────────────────────
+function showSummary() {
+  const list = document.getElementById('summaryList');
+  list.innerHTML = VOICE_FIELDS.map((f, i) => `
+    <div class="field-row">
+      <span class="key">${f.label}</span>
+      <span class="value">${answers[f.key] || '<span style="color:#bbb">未填写</span>'}</span>
+      <span class="edit-link" onclick="renderField(${i})">修改</span>
+    </div>
+  `).join('');
+
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('stepLabel').textContent   = '确认信息';
+  showPage('pageSummary');
+}
+
+// ── 生成合同 ──────────────────────────────────────────────────────────
+async function doGenerate() {
+  showLoading('生成合同中…');
+  try {
+    const resp = await fetch(`${API}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contract_type: '采购合同', voice_data: answers }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || resp.statusText);
+    }
+    const blob     = await resp.blob();
+    const cd       = resp.headers.get('Content-Disposition') || '';
+    const match    = cd.match(/filename\*=UTF-8''(.+)/);
+    const filename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
+
+    // 触发下载
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+
+    showPage('pageSuccess');
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('stepLabel').textContent   = '完成';
+  } catch (err) {
+    alert('生成失败：' + err.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// ── 重新录入 ──────────────────────────────────────────────────────────
+function restart() {
+  answers      = {};
+  currentIndex = 0;
+  renderField(0);
+}
+
+// ── 工具函数 ──────────────────────────────────────────────────────────
+function showPage(id) {
+  ['pageRecord', 'pageSummary', 'pageSuccess'].forEach(p => {
+    document.getElementById(p).classList.toggle('hidden', p !== id);
+  });
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loading').classList.remove('hidden');
+}
+
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+
+// ── 启动 ──────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

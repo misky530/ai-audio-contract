@@ -3,6 +3,8 @@
 import os, urllib.parse, logging
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from contract import generate_contract, list_templates
@@ -13,7 +15,21 @@ from stt import transcribe_bytes, STT_BACKEND
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="语音合同生成", version="0.3.0")
+app = FastAPI(title="语音合同生成", version="0.4.0")
+
+# ── CORS（允许手机/前端跨域访问）────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── 静态文件（H5 前端）────────────────────────────────────────────────
+import pathlib
+STATIC_DIR = pathlib.Path(__file__).parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 
 # ── Schema ────────────────────────────────────────────────────────────
@@ -33,7 +49,7 @@ class VoiceInput(BaseModel):
 # ── 基础接口 ──────────────────────────────────────────────────────────
 @app.get("/", summary="服务状态")
 def root():
-    return {"status": "ok", "version": "0.3.0", "stt_backend": STT_BACKEND}
+    return {"status": "ok", "version": "0.4.0", "stt_backend": STT_BACKEND}
 
 @app.get("/templates")
 def get_templates():
@@ -61,17 +77,9 @@ async def transcribe_field(
     audio:      UploadFile = File(..., description="音频文件 wav/mp3/m4a/webm"),
     language:   str = Form("zh"),
 ):
-    """
-    前端逐字段录音后调用此接口。
-    - field_key: 当前录的是哪个字段（用于自动匹配词库）
-    - 返回识别出的文字，前端展示给用户确认后再调 /generate
-    """
-    # 获取该字段的专用词库
-    prompt = get_prompt(field_key)
-
-    # 读取音频并转录
+    prompt      = get_prompt(field_key)
     audio_bytes = await audio.read()
-    suffix = "." + (audio.filename or "audio.wav").rsplit(".", 1)[-1]
+    suffix      = "." + (audio.filename or "audio.wav").rsplit(".", 1)[-1]
 
     try:
         text = transcribe_bytes(audio_bytes, suffix=suffix, language=language, prompt=prompt)
@@ -84,10 +92,10 @@ async def transcribe_field(
         raise HTTPException(status_code=500, detail=f"STT 识别失败: {e}")
 
     return {
-        "field_key": field_key,
-        "text":      text,
+        "field_key":   field_key,
+        "text":        text,
         "prompt_used": bool(prompt),
-        "backend":   STT_BACKEND,
+        "backend":     STT_BACKEND,
     }
 
 

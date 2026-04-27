@@ -84,7 +84,8 @@ def 格式化金额(amount_str: str) -> str:
 
 
 def 生成合同编号() -> str:
-    return f"HT{date.today().strftime('%Y%m%d')}-001"
+    from datetime import datetime
+    return f"HT{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
 
 def auto_generate(voice_input: dict) -> dict:
