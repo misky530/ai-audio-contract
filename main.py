@@ -1,11 +1,12 @@
 # main.py  —  语音合同生成（阶段二：接入 STT）
 
-import os, urllib.parse, logging
+import os, uuid, urllib.parse, logging
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from io import BytesIO
 
 from contract import generate_contract, list_templates
 from mock_data import VOICE_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VOICE_INPUT, auto_generate
@@ -16,6 +17,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="语音合同生成", version="0.4.0")
+
+# 临时文件存储：token -> (bytes, filename)，用于移动端可靠下载
+_download_store: dict = {}
 
 # ── CORS（允许手机/前端跨域访问）────────────────────────────────────────
 app.add_middleware(
@@ -100,7 +104,7 @@ async def transcribe_field(
 
 
 # ── 生成合同 ──────────────────────────────────────────────────────────
-@app.post("/generate", summary="传入字段数据，生成合同文件")
+@app.post("/generate", summary="传入字段数据，生成合同文件（返回下载 token）")
 def generate(req: VoiceInput):
     fields = auto_generate(req.voice_data)
     try:
@@ -109,9 +113,19 @@ def generate(req: VoiceInput):
         raise HTTPException(status_code=400, detail=str(e))
 
     filename = f"{req.contract_type}_{fields['合同编号']}.docx"
-    encoded  = urllib.parse.quote(filename)
+    token    = str(uuid.uuid4())
+    _download_store[token] = (buf.read(), filename)
+    return JSONResponse({"token": token, "filename": filename})
+
+
+@app.get("/download/{token}", summary="凭 token 下载合同文件")
+def download(token: str):
+    if token not in _download_store:
+        raise HTTPException(status_code=404, detail="下载链接已失效，请重新生成")
+    data, filename = _download_store.pop(token)
+    encoded = urllib.parse.quote(filename)
     return StreamingResponse(
-        buf,
+        BytesIO(data),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
     )

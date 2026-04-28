@@ -358,16 +358,10 @@ async function doGenerate() {
       const err = await resp.json();
       throw new Error(err.detail || resp.statusText);
     }
-    const blob     = await resp.blob();
-    const cd       = resp.headers.get('Content-Disposition') || '';
-    const match    = cd.match(/filename\*=UTF-8''(.+)/);
-    const filename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
+    const { token } = await resp.json();
 
-    // 触发下载
-    const url = URL.createObjectURL(blob);
-    const a   = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+    // 用真实 URL 跳转下载，移动端兼容性最佳
+    window.location.href = `${API}/download/${token}`;
 
     showPage('pageSuccess');
     document.getElementById('progressBar').style.width = '100%';
