@@ -162,8 +162,13 @@
   <div class="success-wrap">
     <div class="success-icon">✅</div>
     <div class="success-title">合同已生成</div>
-    <div class="success-sub">文件已开始下载，请在通知栏查看</div>
-    <button class="btn btn-primary" style="width:100%;" onclick="restart()">重新录入</button>
+    <div class="success-sub" id="successFilename"></div>
+    <a id="downloadBtn" class="btn btn-primary"
+       style="width:100%;display:block;text-decoration:none;text-align:center;margin-bottom:12px;"
+       target="_blank">
+      点击下载合同
+    </a>
+    <button class="btn btn-ghost" style="width:100%;" onclick="restart()">重新录入</button>
   </div>
 </div>
 
@@ -403,11 +408,11 @@ async function doGenerate() {
       const err = await resp.json();
       throw new Error(err.detail || resp.statusText);
     }
-    const { token } = await resp.json();
+    const { token, filename } = await resp.json();
+    const downloadUrl = `${API}/download/${token}`;
 
-    // 用真实 URL 跳转下载，移动端兼容性最佳
-    window.location.href = `${API}/download/${token}`;
-
+    document.getElementById('downloadBtn').href         = downloadUrl;
+    document.getElementById('successFilename').textContent = filename;
     showPage('pageSuccess');
     document.getElementById('progressBar').style.width = '100%';
     document.getElementById('stepLabel').textContent   = '完成';
