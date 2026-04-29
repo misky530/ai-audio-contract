@@ -229,7 +229,7 @@ let headerAnswers  = {};
 let itemList       = [];       // 已完成的货物列表
 let currentItem    = {};       // 正在录入的货物
 
-let lastToken    = '';
+let lastBlob     = null;
 let lastFilename = '';
 
 let mediaRec    = null;
@@ -567,15 +567,20 @@ async function doGenerate() {
   try {
     const resp = await fetch(`${API}/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '1',
+      },
       body: JSON.stringify({ contract_type: '采购合同', voice_data: headerAnswers, items: itemList }),
     });
     if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || resp.statusText); }
-    const { token, filename } = await resp.json();
-    lastToken    = token;
-    lastFilename = filename;
+    // 生成时直接把文件拉回来存为 blob，按钮点击时无需再请求
+    const cd    = resp.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename\*=UTF-8''(.+)/);
+    lastFilename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
+    lastBlob     = await resp.blob();
 
-    document.getElementById('successFilename').textContent = filename;
+    document.getElementById('successFilename').textContent = lastFilename;
     document.getElementById('progressBar').style.width    = '100%';
     document.getElementById('stepLabel').textContent      = '完成';
     showPage('pageSuccess');
@@ -584,27 +589,17 @@ async function doGenerate() {
   } finally { hideLoading(); }
 }
 
-// ── 下载合同（fetch+blob 绕过 ngrok 拦截）────────────────────────────
-async function triggerDownload() {
-  if (!lastToken) return;
-  showLoading('下载中…');
-  try {
-    const resp = await fetch(`${API}/download/${lastToken}`, {
-      headers: { 'ngrok-skip-browser-warning': '1' },
-    });
-    if (!resp.ok) throw new Error('下载链接已失效，请重新生成合同');
-    const blob     = await resp.blob();
-    const blobUrl  = URL.createObjectURL(blob);
-    const a        = document.createElement('a');
-    a.style.display = 'none';
-    a.href          = blobUrl;
-    a.download      = lastFilename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 2000);
-  } catch (err) {
-    alert(err.message);
-  } finally { hideLoading(); }
+// ── 下载合同（blob 已在生成时缓存，点击直接保存）─────────────────────
+function triggerDownload() {
+  if (!lastBlob) { alert('请先生成合同'); return; }
+  const blobUrl = URL.createObjectURL(lastBlob);
+  const a       = document.createElement('a');
+  a.style.display = 'none';
+  a.href          = blobUrl;
+  a.download      = lastFilename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 2000);
 }
 
 // ── 重置 ──────────────────────────────────────────────────────────────
