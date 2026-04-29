@@ -68,12 +68,24 @@ def _transcribe_openai(audio_path: str, language: str, prompt: str) -> str:
 
 
 # ── 讯飞 IAT WebSocket 后端 ───────────────────────────────────────────
+def _get_ffmpeg_exe() -> str:
+    """优先系统 PATH，其次 imageio-ffmpeg 内置二进制"""
+    import shutil
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        raise RuntimeError("找不到 ffmpeg，请安装: pip install imageio-ffmpeg")
+
+
 def _to_pcm16k(src: str) -> tuple:
     """用 ffmpeg 把任意音频转为 16kHz 16bit 单声道 PCM raw，返回 (路径, 是否临时文件)"""
     out = src + "_16k.pcm"
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", src,
+            [_get_ffmpeg_exe(), "-y", "-i", src,
              "-ar", "16000", "-ac", "1", "-f", "s16le", out],
             check=True, capture_output=True,
         )

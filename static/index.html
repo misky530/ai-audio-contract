@@ -90,6 +90,13 @@
   .success-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .success-sub   { font-size: 14px; color: var(--gray); margin-bottom: 28px; }
 
+  /* ── 候选词 ── */
+  .suggest-chip { display: inline-block; padding: 5px 12px; border-radius: 20px;
+                  background: #e6f4ff; border: 1px solid #91caff; color: #1677ff;
+                  font-size: 13px; cursor: pointer; transition: background .15s; }
+  .suggest-chip:active { background: #bae0ff; }
+  .suggest-label { font-size: 12px; color: var(--gray); width: 100%; margin-bottom: 2px; }
+
   /* ── Loading ── */
   .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45);
                       display: flex; flex-direction: column; align-items: center;
@@ -124,6 +131,7 @@
 
     <div class="result-box">
       <label>识别结果（可手动修改）</label>
+      <div id="suggestions" style="display:none; margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>
       <input type="text" id="resultInput" placeholder="录音后自动填入…">
     </div>
   </div>
@@ -184,10 +192,11 @@ const VOICE_FIELDS = [
 
 // ── 状态 ──────────────────────────────────────────────────────────────
 let currentIndex = 0;
-let answers      = {};        // { field_key: text }
+let answers      = {};
 let mediaRec     = null;
 let audioChunks  = [];
 let isRecording  = false;
+let fromSummary  = false;     // 从汇总页跳入单字段时为 true，完成后返回汇总
 
 // ── 初始化 ────────────────────────────────────────────────────────────
 function init() {
@@ -218,9 +227,14 @@ function renderField(idx) {
   document.getElementById('recStatus').textContent   = '点击麦克风开始录音';
   document.getElementById('recStatus').className     = 'rec-status';
   document.getElementById('recBtn').className        = 'rec-btn';
+  document.getElementById('suggestions').style.display = 'none';
 
   const nextBtn = document.getElementById('nextBtn');
-  nextBtn.textContent = idx === total - 1 ? '完成，确认信息 →' : '下一项 →';
+  if (fromSummary) {
+    nextBtn.textContent = '保存并返回确认 →';
+  } else {
+    nextBtn.textContent = idx === total - 1 ? '完成，确认信息 →' : '下一项 →';
+  }
 
   showPage('pageRecord');
   speakHint();
@@ -298,6 +312,7 @@ async function uploadAudio() {
     document.getElementById('recBtn').textContent = '🎤';
     document.getElementById('recStatus').textContent = '识别完成，可修改后继续';
     document.getElementById('recStatus').className   = 'rec-status';
+    renderSuggestions(data.suggestions || []);
   } catch (err) {
     alert('识别失败：' + err.message);
     document.getElementById('recBtn').textContent = '🎤';
@@ -306,6 +321,23 @@ async function uploadAudio() {
   } finally {
     hideLoading();
   }
+}
+
+// ── 候选词渲染 ────────────────────────────────────────────────────────
+function renderSuggestions(list) {
+  const box = document.getElementById('suggestions');
+  if (!list || list.length === 0) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  box.innerHTML =
+    '<span class="suggest-label">💡 知识库匹配，点击使用：</span>' +
+    list.map(s =>
+      `<span class="suggest-chip" onclick="applySuggestion('${s.text.replace(/'/g, "\\'")}')">${s.text}</span>`
+    ).join('');
+}
+
+function applySuggestion(text) {
+  document.getElementById('resultInput').value = text;
+  document.getElementById('suggestions').style.display = 'none';
 }
 
 // ── 导航 ──────────────────────────────────────────────────────────────
@@ -317,16 +349,29 @@ function saveCurrentAnswer() {
 
 function goPrev() {
   saveCurrentAnswer();
-  if (currentIndex > 0) renderField(currentIndex - 1);
+  if (fromSummary) {
+    fromSummary = false;
+    showSummary();
+  } else if (currentIndex > 0) {
+    renderField(currentIndex - 1);
+  }
 }
 
 function goNext() {
   saveCurrentAnswer();
-  if (currentIndex < VOICE_FIELDS.length - 1) {
+  if (fromSummary) {
+    fromSummary = false;
+    showSummary();
+  } else if (currentIndex < VOICE_FIELDS.length - 1) {
     renderField(currentIndex + 1);
   } else {
     showSummary();
   }
+}
+
+function editFromSummary(idx) {
+  fromSummary = true;
+  renderField(idx);
 }
 
 // ── 汇总页 ────────────────────────────────────────────────────────────
@@ -336,7 +381,7 @@ function showSummary() {
     <div class="field-row">
       <span class="key">${f.label}</span>
       <span class="value">${answers[f.key] || '<span style="color:#bbb">未填写</span>'}</span>
-      <span class="edit-link" onclick="renderField(${i})">修改</span>
+      <span class="edit-link" onclick="editFromSummary(${i})">修改</span>
     </div>
   `).join('');
 

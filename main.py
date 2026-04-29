@@ -12,6 +12,7 @@ from contract import generate_contract, list_templates
 from mock_data import VOICE_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VOICE_INPUT, auto_generate
 from vocab import get_prompt
 from stt import transcribe_bytes, STT_BACKEND
+import knowledge as kb
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -95,9 +96,11 @@ async def transcribe_field(
         logger.error(f"STT 失败: {e}")
         raise HTTPException(status_code=500, detail=f"STT 识别失败: {e}")
 
+    suggestions = kb.suggest(field_key, text)
     return {
         "field_key":   field_key,
         "text":        text,
+        "suggestions": suggestions,
         "prompt_used": bool(prompt),
         "backend":     STT_BACKEND,
     }
@@ -151,3 +154,14 @@ def generate_mock(contract_type: str = "采购合同"):
 @app.get("/preview/mock", summary="预览 mock 生成的完整字段")
 def preview_mock():
     return auto_generate(MOCK_VOICE_INPUT)
+
+
+# ── 知识库管理 ────────────────────────────────────────────────────────
+@app.get("/knowledge", summary="查看知识库")
+def get_knowledge():
+    return kb.load()
+
+@app.post("/knowledge/reload", summary="重新加载知识库（编辑 knowledge.json 后调用）")
+def reload_knowledge():
+    data = kb.reload()
+    return {"status": "ok", "counts": {k: len(v) for k, v in data.items()}}
