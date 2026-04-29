@@ -1,0 +1,19 @@
+<navigation-bar title="合同已生成" showBack="{{false}}"></navigation-bar>
+
+<view class="success-wrap">
+  <view class="success-icon">✅</view>
+  <view class="success-title">合同已生成</view>
+  <view class="success-sub">{{filename}}</view>
+
+  <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" bindtap="triggerDownload">
+    点击下载合同
+  </button>
+
+  <button class="btn btn-ghost" style="width: 100%;" bindtap="restart">
+    重新录入
+  </button>
+
+  <view class="debug-info">
+    <text decode="{{true}}">文件名：{{filename}}\n大小：{{fileSize}}\n类型：{{fileType}}</text>
+  </view>
+</view>

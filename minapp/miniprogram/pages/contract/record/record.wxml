@@ -1,0 +1,73 @@
+<navigation-bar title="语音采购合同" showBack="{{false}}"></navigation-bar>
+
+<view class="progress-wrap">
+  <view class="progress-bar" style="width: {{progress}}%;"></view>
+  <view class="step-label">{{stepLabel}}</view>
+</view>
+
+<view class="card">
+  <view class="phase-badge {{phase === 'header' ? 'badge-header' : 'badge-item'}}">
+    {{phase === 'header' ? '甲方信息' : ('第 ' + itemNo + ' 条货物')}}
+  </view>
+
+  <view class="field-section">
+    <view class="field-label">{{currentField.label}}</view>
+    <view class="field-hint">{{currentField.hint}}</view>
+  </view>
+
+  <view class="tts-btn" bindtap="speakHint">
+    <text class="tts-icon">🔊</text>
+    <text class="tts-text">朗读提示</text>
+  </view>
+
+  <view class="rec-area">
+    <view class="rec-ring {{recordState === 'recording' ? 'recording' : ''}}"></view>
+    <view class="rec-btn {{recordState}}" bindtap="toggleRecord">
+      <text class="rec-icon">{{recordState === 'recording' ? '⏹' : '🎤'}}</text>
+    </view>
+    <view class="rec-status {{recordState === 'recording' ? 'active' : ''}}">
+      {{recordStatusText}}
+    </view>
+  </view>
+
+  <view class="result-box">
+    <view wx:if="{{suggestions.length > 0}}" class="suggest-wrap">
+      <text class="suggest-label">💡 知识库匹配，点击使用：</text>
+      <view class="suggest-chips">
+        <view
+          wx:for="{{suggestions}}"
+          wx:key="index"
+          class="suggest-chip"
+          bindtap="applySuggestion"
+          data-text="{{item.text}}"
+        >{{item.text}}</view>
+      </view>
+    </view>
+
+    <view class="input-group">
+      <text class="input-label">识别结果（可手动修改）</text>
+      <input
+        class="result-input"
+        type="text"
+        value="{{resultText}}"
+        placeholder="录音后自动填入…"
+        bindinput="onInputChange"
+      />
+    </view>
+  </view>
+</view>
+
+<view class="nav-container">
+  <view class="nav-row">
+    <button
+      class="btn btn-ghost {{fromSummary ? '' : (fieldIndex === 0 && phase === 'item' ? 'hidden' : '')}}"
+      bindtap="goPrev"
+    >← 上一项</button>
+    <button class="btn btn-primary" bindtap="goNext">{{nextBtnText}}</button>
+  </view>
+</view>
+
+<view class="loading-overlay {{showLoading ? '' : 'hidden'}}">
+  <view class="spinner"></view>
+  <text class="loading-text">{{loadingText}}</text>
+</view>

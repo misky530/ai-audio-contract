@@ -1,0 +1,49 @@
+<navigation-bar title="确认合同信息" showBack="{{true}}" bindback="onBack"></navigation-bar>
+
+<view class="progress-wrap">
+  <view class="progress-bar" style="width: {{progress}}%;"></view>
+</view>
+<view class="step-label">{{stepLabel}}</view>
+
+<view class="card">
+  <view class="summary-title">确认合同信息</view>
+
+  <view class="section-label">甲方信息</view>
+  <view id="summaryHeader">
+    <view wx:for="{{headerFields}}" wx:key="key" class="field-row">
+      <text class="key">{{item.label}}</text>
+      <text class="value {{!headerAnswers[item.key] ? 'empty' : ''}}">
+        {{headerAnswers[item.key] || '未填写'}}
+      </text>
+      <text class="edit-link" bindtap="editHeaderField" data-index="{{index}}">修改</text>
+    </view>
+  </view>
+
+  <view class="section-label">货物清单</view>
+  <view id="summaryItems">
+    <view wx:for="{{itemList}}" wx:key="index" class="item-section">
+      <view class="item-section-header">
+        <text class="item-title">{{index + 1}}. {{itemTitles[index]}}</text>
+        <text class="edit-link" bindtap="editItem" data-index="{{index}}">修改</text>
+      </view>
+      <view wx:for="{{itemFieldRows}}" wx:key="fieldKey" wx:for-item="field"
+        class="field-row {{!item[field.fieldKey] ? 'empty-row' : ''}}">
+        <text class="key">{{field.label}}</text>
+        <text class="value {{!item[field.fieldKey] ? 'empty' : ''}}">
+          {{item[field.fieldKey] || '—'}}
+        </text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="bottom-container">
+  <button class="btn btn-primary" style="width: 100%; font-size: 16px;" bindtap="doGenerate">
+    生成合同并下载
+  </button>
+</view>
+
+<view class="loading-overlay {{showLoading ? '' : 'hidden'}}">
+  <view class="spinner"></view>
+  <text class="loading-text">{{loadingText}}</text>
+</view>

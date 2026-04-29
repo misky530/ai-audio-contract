@@ -1,0 +1,40 @@
+<navigation-bar title="语音合同生成" showBack="{{false}}"></navigation-bar>
+
+<view class="container">
+  <view class="header">
+    <view class="logo">🎤</view>
+    <view class="title">语音采购合同</view>
+    <view class="subtitle">通过语音快速生成采购合同</view>
+  </view>
+
+  <view class="feature-list">
+    <view class="feature-item">
+      <text class="feature-icon">🎙️</text>
+      <view class="feature-text">
+        <view class="feature-title">语音录制</view>
+        <view class="feature-desc">点击麦克风开始录制语音</view>
+      </view>
+    </view>
+    <view class="feature-item">
+      <text class="feature-icon">📝</text>
+      <view class="feature-text">
+        <view class="feature-title">语音转文字</view>
+        <view class="feature-desc">自动识别语音内容转为文字</view>
+      </view>
+    </view>
+    <view class="feature-item">
+      <text class="feature-icon">📄</text>
+      <view class="feature-text">
+        <view class="feature-title">合同生成</view>
+        <view class="feature-desc">一键生成标准采购合同文档</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="start-section">
+    <view class="start-btn" bindtap="startContract">
+      <text class="btn-text">开始生成合同</text>
+      <view class="btn-shine"></view>
+    </view>
+  </view>
+</view>
