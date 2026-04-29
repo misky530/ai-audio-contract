@@ -2,7 +2,7 @@
 
 import os, uuid, urllib.parse, logging
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -35,6 +35,14 @@ import pathlib
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+
+@app.get("/app", include_in_schema=False)
+async def serve_app():
+    """返回前端页面，强制 no-cache，避免手机浏览器缓存旧版本"""
+    return FileResponse(
+        str(STATIC_DIR / "index.html"),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 # ── Schema ────────────────────────────────────────────────────────────

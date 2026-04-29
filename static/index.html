@@ -187,11 +187,10 @@
     <div class="success-icon">✅</div>
     <div class="success-title">合同已生成</div>
     <div class="success-sub" id="successFilename"></div>
-    <a id="downloadBtn" class="btn btn-primary"
-       style="width:100%;display:block;text-decoration:none;text-align:center;margin-bottom:12px;"
-       target="_blank">
+    <button id="downloadBtn" class="btn btn-primary"
+            style="width:100%;margin-bottom:12px;" onclick="triggerDownload()">
       点击下载合同
-    </a>
+    </button>
     <button class="btn btn-ghost" style="width:100%;" onclick="restart()">重新录入</button>
   </div>
 </div>
@@ -229,6 +228,9 @@ let editingItem  = -1;         // -1 = 新增，>=0 = 编辑第N条
 let headerAnswers  = {};
 let itemList       = [];       // 已完成的货物列表
 let currentItem    = {};       // 正在录入的货物
+
+let lastToken    = '';
+let lastFilename = '';
 
 let mediaRec    = null;
 let audioChunks = [];
@@ -570,14 +572,38 @@ async function doGenerate() {
     });
     if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || resp.statusText); }
     const { token, filename } = await resp.json();
+    lastToken    = token;
+    lastFilename = filename;
 
-    document.getElementById('downloadBtn').href            = `${API}/download/${token}`;
     document.getElementById('successFilename').textContent = filename;
     document.getElementById('progressBar').style.width    = '100%';
     document.getElementById('stepLabel').textContent      = '完成';
     showPage('pageSuccess');
   } catch (err) {
     alert('生成失败：' + err.message);
+  } finally { hideLoading(); }
+}
+
+// ── 下载合同（fetch+blob 绕过 ngrok 拦截）────────────────────────────
+async function triggerDownload() {
+  if (!lastToken) return;
+  showLoading('下载中…');
+  try {
+    const resp = await fetch(`${API}/download/${lastToken}`, {
+      headers: { 'ngrok-skip-browser-warning': '1' },
+    });
+    if (!resp.ok) throw new Error('下载链接已失效，请重新生成合同');
+    const blob     = await resp.blob();
+    const blobUrl  = URL.createObjectURL(blob);
+    const a        = document.createElement('a');
+    a.style.display = 'none';
+    a.href          = blobUrl;
+    a.download      = lastFilename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 2000);
+  } catch (err) {
+    alert(err.message);
   } finally { hideLoading(); }
 }
 
