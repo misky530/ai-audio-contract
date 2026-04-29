@@ -192,6 +192,7 @@
       点击下载合同
     </button>
     <button class="btn btn-ghost" style="width:100%;" onclick="restart()">重新录入</button>
+    <div id="debugInfo" style="margin-top:16px;padding:12px;background:#f5f5f5;border-radius:8px;text-align:left;font-size:12px;color:#595959;word-break:break-all;line-height:1.8;"></div>
   </div>
 </div>
 
@@ -578,7 +579,17 @@ async function doGenerate() {
     const cd    = resp.headers.get('Content-Disposition') || '';
     const match = cd.match(/filename\*=UTF-8''(.+)/);
     lastFilename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
-    lastBlob     = await resp.blob();
+    lastBlob = await resp.blob();
+
+    // 调试信息
+    const blobUrl = URL.createObjectURL(lastBlob);
+    document.getElementById('debugInfo').innerHTML =
+      `<b>调试信息</b><br>` +
+      `文件名：${lastFilename}<br>` +
+      `大小：${(lastBlob.size / 1024).toFixed(1)} KB<br>` +
+      `类型：${lastBlob.type}<br>` +
+      `Share API：${!!navigator.share} / canShare：${!!(navigator.canShare)}<br>` +
+      `Blob 直链：<a href="${blobUrl}" style="color:#1677ff">${blobUrl.substring(0,60)}…</a>`;
 
     document.getElementById('successFilename').textContent = lastFilename;
     document.getElementById('progressBar').style.width    = '100%';
