@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "28083:8000"
+    environment:
+      - STT_BACKEND=xfyun
+      - XFYUN_APP_ID=${XFYUN_APP_ID}
+      - XFYUN_API_KEY=${XFYUN_API_KEY}
+      - XFYUN_API_SECRET=${XFYUN_API_SECRET}
+    volumes:
+      # 知识库和模板挂载到宿主机，方便直接编辑，无需重新构建镜像
+      - ./knowledge.json:/app/knowledge.json
+      - ./templates:/app/templates

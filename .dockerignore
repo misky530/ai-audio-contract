@@ -1,7 +1,9 @@
-﻿__pycache__/
-__pycache__1/
-.env
+.git
+__pycache__
 *.pyc
+*.pyo
+.env
 ngrok.log
 test_audio/
 采购合同_*.docx
+*.cpython-*.pyc
