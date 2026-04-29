@@ -589,17 +589,31 @@ async function doGenerate() {
   } finally { hideLoading(); }
 }
 
-// ── 下载合同（blob 已在生成时缓存，点击直接保存）─────────────────────
-function triggerDownload() {
+// ── 下载合同 ──────────────────────────────────────────────────────────
+async function triggerDownload() {
   if (!lastBlob) { alert('请先生成合同'); return; }
-  const blobUrl = URL.createObjectURL(lastBlob);
-  const a       = document.createElement('a');
-  a.style.display = 'none';
-  a.href          = blobUrl;
-  a.download      = lastFilename;
+
+  const file = new File([lastBlob], lastFilename, {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+
+  // Android Chrome：优先用 Web Share API（原生分享/保存面板）
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: lastFilename });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // 用户取消，不报错
+    }
+  }
+
+  // PC / 不支持 Share API 的浏览器：传统 blob 下载
+  const url = URL.createObjectURL(file);
+  const a   = document.createElement('a');
+  a.href = url; a.download = lastFilename;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 2000);
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 2000);
 }
 
 // ── 重置 ──────────────────────────────────────────────────────────────
