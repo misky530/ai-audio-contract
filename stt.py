@@ -193,6 +193,7 @@ def _transcribe_xfyun(audio_path: str) -> str:
         raise RuntimeError(errors[0])
 
     text = "".join(result_parts).strip()
+    text = text.rstrip("。，、；：！？,.;:!?")  # 讯飞末尾自动加标点，去掉
     logger.info(f"[xfyun] 识别结果: {text!r}")
     return text
 
