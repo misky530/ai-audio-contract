@@ -1,6 +1,6 @@
 # mock_data.py  —  字段分层管理（IT设备供货商版）
 
-from datetime import date
+from datetime import date, datetime
 import re
 
 # ── 1. 乙方（我方）固定信息 ──────────────────────────────────────────
@@ -14,20 +14,27 @@ OUR_COMPANY = {
     "银行账号":   "0200004609200114114",
 }
 
-# ── 2. 用户语音输入字段 ───────────────────────────────────────────────
-VOICE_FIELDS = [
-    {"key": "甲方名称",     "label": "甲方公司名称",   "hint": "请说出对方公司全称，例如：北京星辰科技有限公司",          "vocab": "甲方名称"},
-    {"key": "甲方联系人",   "label": "甲方联系人",     "hint": "请说出对方联系人姓名，例如：张伟",                        "vocab": "甲方联系人"},
-    {"key": "甲方电话",     "label": "甲方联系电话",   "hint": "请说出对方联系电话，例如：一三八零零一三八零零零",         "vocab": "甲方电话"},
-    {"key": "货物品类",     "label": "货物品类",       "hint": "请说出设备类型，例如：笔记本电脑、服务器、交换机",         "vocab": "货物品类"},
-    {"key": "货物品牌",     "label": "货物品牌",       "hint": "请说出品牌名称，例如：联想、戴尔、华为",                   "vocab": "货物品牌"},
-    {"key": "货物型号",     "label": "货物型号",       "hint": "请说出具体型号，例如：ThinkPad X1 Carbon Gen12",          "vocab": "货物型号"},
-    {"key": "货物规格",     "label": "货物规格配置",   "hint": "请说出主要配置，例如：十六G内存 五百一十二G固态",          "vocab": "货物规格"},
-    {"key": "数量",         "label": "采购数量",       "hint": "请说出数量和单位，例如：五十台",                           "vocab": "数量"},
-    {"key": "合同金额数字", "label": "合同总金额（元）","hint": "请说出合同金额，例如：四十九万，或者四十九万元整",         "vocab": "合同金额数字"},
+# ── 2. 甲方语音录入字段（仅甲方信息）────────────────────────────────
+HEADER_FIELDS = [
+    {"key": "甲方名称",   "label": "甲方公司名称", "hint": "请说出对方公司全称，例如：北京星辰科技有限公司",   "vocab": "甲方名称"},
+    {"key": "甲方联系人", "label": "甲方联系人",   "hint": "请说出对方联系人姓名，例如：张伟",                 "vocab": "甲方联系人"},
+    {"key": "甲方电话",   "label": "甲方联系电话", "hint": "请逐字说出电话号码，例如：一三八零零一三八零零零", "vocab": "甲方电话"},
 ]
 
-# ── 3. 标准条款默认值 ─────────────────────────────────────────────────
+# ── 3. 每条货物的录入字段 ─────────────────────────────────────────────
+ITEM_FIELDS = [
+    {"key": "货物品类", "label": "货物品类",       "hint": "请说出设备类型，例如：笔记本电脑、服务器",            "vocab": "货物品类"},
+    {"key": "货物品牌", "label": "货物品牌",       "hint": "请说出品牌名称，例如：联想、戴尔、华为",              "vocab": "货物品牌"},
+    {"key": "货物型号", "label": "货物型号",       "hint": "请说出具体型号，例如：ThinkPad X1 Carbon Gen12",     "vocab": "货物型号"},
+    {"key": "货物规格", "label": "货物规格配置",   "hint": "请说出主要配置，例如：十六G内存 五百一十二G固态",     "vocab": "货物规格"},
+    {"key": "数量",     "label": "采购数量",       "hint": "请说出数量和单位，例如：五十台",                      "vocab": "数量"},
+    {"key": "单价",     "label": "单价（元/台）",  "hint": "请说出单件价格，例如：九千八百元，或不知道直接跳过",  "vocab": "合同金额数字"},
+]
+
+# 向后兼容
+VOICE_FIELDS = HEADER_FIELDS + ITEM_FIELDS
+
+# ── 4. 标准条款默认值 ─────────────────────────────────────────────────
 DEFAULTS = {
     "甲方地址":         "",
     "计量单位":         "台",
@@ -50,9 +57,7 @@ DEFAULTS = {
     "其他约定":         "无",
 }
 
-
-# ── 4. 自动计算字段 ───────────────────────────────────────────────────
-
+# ── 5. 工具函数 ───────────────────────────────────────────────────────
 def 数字转大写(amount_str: str) -> str:
     digits = re.sub(r"[^\d.]", "", amount_str)
     if not digits:
@@ -61,8 +66,8 @@ def 数字转大写(amount_str: str) -> str:
         amount = float(digits)
     except ValueError:
         return amount_str
-    units  = ["", "拾", "佰", "仟", "万", "拾", "佰", "仟", "亿"]
-    chars  = ["零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"]
+    units = ["", "拾", "佰", "仟", "万", "拾", "佰", "仟", "亿"]
+    chars = ["零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"]
     int_part = int(amount)
     result, s, n = "", str(int_part), len(str(int_part))
     for i, c in enumerate(s):
@@ -84,48 +89,101 @@ def 格式化金额(amount_str: str) -> str:
 
 
 def 生成合同编号() -> str:
-    from datetime import datetime
     return f"HT{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
 
-def auto_generate(voice_input: dict) -> dict:
-    """把用户语音输入 + 乙方固定信息 + 默认值 + 自动计算，合并成完整字段字典"""
+def _parse_quantity(数量原文: str) -> tuple:
+    """返回 (数量字符串, 单位字符串)"""
+    m = re.search(r"(台|套|个|件|块|片|条|根|批|箱)", 数量原文)
+    单位 = m.group(1) if m else "台"
+    数量 = re.sub(r"[台套个件块片条根批箱]", "", 数量原文).strip() or 数量原文
+    return 数量, 单位
+
+
+def _process_item(item: dict, index: int) -> tuple:
+    """处理单条货物，返回 (item_dict, 小计数字)"""
+    品牌 = item.get("货物品牌", "")
+    型号 = item.get("货物型号", "")
+    品类 = item.get("货物品类", "")
+    规格 = item.get("货物规格", "")
+
+    名称 = " ".join(p for p in [品牌, 型号, 品类] if p)
+    if 规格:
+        名称 += f"（{规格}）"
+
+    数量, 单位 = _parse_quantity(item.get("数量", ""))
+
+    单价原文  = item.get("单价", "0")
+    单价数字  = float(re.sub(r"[^\d.]", "", 单价原文) or "0")
+    try:
+        数量数字 = float(re.sub(r"[^\d.]", "", 数量) or "0")
+    except ValueError:
+        数量数字 = 0
+    小计数字 = 单价数字 * 数量数字
+
+    return {
+        "序号":   str(index + 1),
+        "货物名称": 名称,
+        "品牌":   品牌,
+        "数量":   数量,
+        "单位":   单位,
+        "单价":   f"{单价数字:,.2f}" if 单价数字 else "",
+        "小计":   f"{小计数字:,.2f}" if 小计数字 else "",
+        "备注":   item.get("备注", ""),
+    }, 小计数字
+
+
+# ── 6. 核心：合并所有字段 ─────────────────────────────────────────────
+def auto_generate(voice_input: dict, items: list = None) -> dict:
+    """
+    voice_input : 甲方信息等 header 字段
+    items       : 货物列表，每项含 货物品牌/型号/品类/规格/数量/单价
+    """
     fields = {}
     fields.update(OUR_COMPANY)
     fields.update(DEFAULTS)
     fields.update(voice_input)
 
-    # 货物名称：拼合品牌 + 型号 + 品类 + 规格
-    parts = [voice_input.get("货物品牌",""), voice_input.get("货物型号",""), voice_input.get("货物品类","")]
-    spec  = voice_input.get("货物规格", "")
-    名称  = " ".join(p for p in parts if p)
-    if spec:
-        名称 += f"（{spec}）"
-    fields["货物名称"] = 名称
-    fields["品牌产地"] = voice_input.get("货物品牌", "")
+    processed_items = []
+    total_amount    = 0.0
 
-    # 从数量原文中提取单位
-    数量原文 = voice_input.get("数量", "")
-    m = re.search(r"(台|套|个|件|块|片|条|根|批|箱)", 数量原文)
-    if m:
-        fields["计量单位"] = m.group(1)
-        fields["数量"]     = re.sub(r"[台套个件块片条根批箱]", "", 数量原文).strip()
+    if items:
+        for i, item in enumerate(items):
+            p, subtotal = _process_item(item, i)
+            processed_items.append(p)
+            total_amount += subtotal
+    else:
+        # 兼容旧单品模式
+        parts = [voice_input.get("货物品牌",""), voice_input.get("货物型号",""), voice_input.get("货物品类","")]
+        spec  = voice_input.get("货物规格", "")
+        名称  = " ".join(p for p in parts if p)
+        if spec:
+            名称 += f"（{spec}）"
+        数量, 单位 = _parse_quantity(voice_input.get("数量", ""))
+        processed_items = [{
+            "序号": "1", "货物名称": 名称, "品牌": voice_input.get("货物品牌",""),
+            "数量": 数量, "单位": 单位, "单价": "", "小计": "", "备注": "",
+        }]
+        金额原文     = voice_input.get("合同金额数字", "0")
+        total_amount = float(re.sub(r"[^\d.]", "", 金额原文) or "0")
+        fields["计量单位"] = 单位
+        fields["数量"]     = 数量
 
-    # 金额自动计算
-    金额原文 = voice_input.get("合同金额数字", "0")
-    fields["合同金额数字"] = 格式化金额(金额原文)
-    fields["合同金额大写"] = 数字转大写(金额原文)
-    try:
-        金额 = float(re.sub(r"[^\d.]", "", 金额原文))
-        税率 = float(fields.get("税率","13")) / 100
-        fields["税额"]      = f"{金额 * 税率 / (1 + 税率):,.2f}"
-        预付 = 金额 * float(fields.get("预付款比例","30")) / 100
+    fields["items"] = processed_items
+
+    # 金额计算
+    if total_amount > 0:
+        fields["合同金额数字"] = f"{total_amount:,.2f}"
+        fields["合同金额大写"] = 数字转大写(str(total_amount))
+        税率  = float(fields.get("税率", "13")) / 100
+        fields["税额"] = f"{total_amount * 税率 / (1 + 税率):,.2f}"
+        预付  = total_amount * float(fields.get("预付款比例", "30")) / 100
         fields["预付款金额"] = f"{预付:,.2f}"
-        fields["余款金额"]   = f"{金额 - 预付:,.2f}"
-    except (ValueError, ZeroDivisionError):
+        fields["余款金额"]   = f"{total_amount - 预付:,.2f}"
+    else:
+        fields["合同金额数字"] = fields["合同金额大写"] = ""
         fields["税额"] = fields["预付款金额"] = fields["余款金额"] = ""
 
-    # 交货地点默认同甲方地址
     if not fields.get("交货地点"):
         fields["交货地点"] = fields.get("甲方地址") or "甲方指定地点"
 
@@ -134,16 +192,29 @@ def auto_generate(voice_input: dict) -> dict:
     return fields
 
 
-# ── 5. Mock 语音输入（测试用）────────────────────────────────────────
+# ── 7. Mock 数据 ──────────────────────────────────────────────────────
 MOCK_VOICE_INPUT = {
-    "甲方名称":     "北京星辰科技有限公司",
-    "甲方联系人":   "张伟",
-    "甲方电话":     "13800138000",
-    "甲方地址":     "北京市朝阳区望京街道10号",
-    "货物品类":     "笔记本电脑",
-    "货物品牌":     "联想",
-    "货物型号":     "ThinkPad X1 Carbon Gen12",
-    "货物规格":     "十六G内存 五百一十二G固态",
-    "数量":         "50台",
-    "合同金额数字": "490000",
+    "甲方名称":   "北京星辰科技有限公司",
+    "甲方联系人": "张伟",
+    "甲方电话":   "13800138000",
+    "甲方地址":   "北京市朝阳区望京街道10号",
 }
+
+MOCK_ITEMS = [
+    {
+        "货物品类": "笔记本电脑",
+        "货物品牌": "联想",
+        "货物型号": "ThinkPad X1 Carbon Gen12",
+        "货物规格": "16G内存 512G固态",
+        "数量":     "50台",
+        "单价":     "9800",
+    },
+    {
+        "货物品类": "服务器",
+        "货物品牌": "戴尔",
+        "货物型号": "PowerEdge R750",
+        "货物规格": "双路Xeon 256G内存",
+        "数量":     "2台",
+        "单价":     "85000",
+    },
+]

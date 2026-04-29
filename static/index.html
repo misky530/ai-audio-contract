@@ -9,6 +9,7 @@
     --blue:   #1677ff;
     --green:  #52c41a;
     --red:    #ff4d4f;
+    --orange: #fa8c16;
     --gray:   #8c8c8c;
     --bg:     #f5f5f5;
     --card:   #ffffff;
@@ -18,92 +19,95 @@
   body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
          background: var(--bg); color: #262626; min-height: 100dvh; }
 
-  /* ── 顶部进度条 ── */
+  /* ── 顶部 ── */
   .topbar { background: var(--blue); color: #fff; padding: 14px 16px 10px;
             position: sticky; top: 0; z-index: 10; }
   .topbar h1 { font-size: 17px; font-weight: 600; }
   .progress-wrap { margin-top: 8px; background: rgba(255,255,255,.3);
                    border-radius: 4px; height: 4px; overflow: hidden; }
-  .progress-bar  { height: 100%; background: #fff;
-                   transition: width .3s; border-radius: 4px; }
+  .progress-bar  { height: 100%; background: #fff; transition: width .3s; border-radius: 4px; }
   .step-label { font-size: 12px; margin-top: 4px; opacity: .85; }
 
   /* ── 卡片 ── */
   .card { background: var(--card); border-radius: var(--radius);
           margin: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 
-  /* ── 字段页 ── */
+  /* ── 录音页 ── */
   .field-label { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
-  .field-hint  { font-size: 13px; color: var(--gray); margin-bottom: 20px;
-                 line-height: 1.5; }
+  .field-hint  { font-size: 13px; color: var(--gray); margin-bottom: 16px; line-height: 1.5; }
+  .phase-badge { display: inline-block; padding: 2px 10px; border-radius: 20px;
+                 font-size: 12px; font-weight: 500; margin-bottom: 12px; }
+  .badge-header { background: #e6f4ff; color: var(--blue); }
+  .badge-item   { background: #fff7e6; color: var(--orange); }
+
   .tts-btn { background: none; border: none; color: var(--blue);
-             font-size: 13px; cursor: pointer; margin-bottom: 16px;
+             font-size: 13px; cursor: pointer; margin-bottom: 12px;
              display: flex; align-items: center; gap: 4px; }
 
-  /* ── 录音按钮 ── */
-  .rec-area { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .rec-btn  { width: 80px; height: 80px; border-radius: 50%;
-              border: none; cursor: pointer; font-size: 32px;
-              display: flex; align-items: center; justify-content: center;
-              transition: transform .15s, box-shadow .15s;
-              background: var(--blue); box-shadow: 0 4px 12px rgba(22,119,255,.4); }
-  .rec-btn.recording { background: var(--red);
-                        box-shadow: 0 4px 16px rgba(255,77,79,.5);
+  .rec-area { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .rec-btn  { width: 80px; height: 80px; border-radius: 50%; border: none; cursor: pointer;
+              font-size: 32px; display: flex; align-items: center; justify-content: center;
+              background: var(--blue); box-shadow: 0 4px 12px rgba(22,119,255,.4);
+              transition: transform .15s; }
+  .rec-btn.recording { background: var(--red); box-shadow: 0 4px 16px rgba(255,77,79,.5);
                         animation: pulse 1s infinite; }
-  @keyframes pulse {
-    0%,100% { transform: scale(1); }
-    50%      { transform: scale(1.08); }
-  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
   .rec-status { font-size: 13px; color: var(--gray); }
   .rec-status.active { color: var(--red); font-weight: 500; }
 
-  /* ── 识别结果输入框 ── */
-  .result-box { width: 100%; margin-top: 16px; }
-  .result-box label { font-size: 13px; color: var(--gray); display: block;
-                      margin-bottom: 6px; }
+  .result-box { width: 100%; margin-top: 14px; }
+  .result-box label { font-size: 13px; color: var(--gray); display: block; margin-bottom: 6px; }
   .result-box input { width: 100%; border: 1px solid #d9d9d9; border-radius: 8px;
-                       padding: 10px 12px; font-size: 15px; outline: none;
-                       transition: border-color .2s; }
+                       padding: 10px 12px; font-size: 15px; outline: none; transition: border-color .2s; }
   .result-box input:focus { border-color: var(--blue); }
 
-  /* ── 导航按钮 ── */
-  .nav-row { display: flex; gap: 10px; margin-top: 20px; }
+  /* ── 候选词 ── */
+  .suggest-wrap  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .suggest-label { font-size: 12px; color: var(--gray); width: 100%; }
+  .suggest-chip  { padding: 4px 12px; border-radius: 20px; background: #e6f4ff;
+                   border: 1px solid #91caff; color: var(--blue); font-size: 13px; cursor: pointer; }
+  .suggest-chip:active { background: #bae0ff; }
+
+  /* ── 按钮 ── */
+  .nav-row { display: flex; gap: 10px; margin-top: 16px; }
   .btn { flex: 1; padding: 13px; border: none; border-radius: 10px;
          font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
   .btn:active { opacity: .75; }
   .btn-primary { background: var(--blue); color: #fff; }
   .btn-ghost   { background: #f0f0f0; color: #595959; }
+  .btn-orange  { background: var(--orange); color: #fff; }
 
-  /* ── 汇总确认页 ── */
+  /* ── 货物列表页 ── */
+  .item-card { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 10px;
+               padding: 12px 14px; margin-bottom: 10px; position: relative; }
+  .item-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; padding-right: 48px; }
+  .item-card-detail { font-size: 12px; color: var(--gray); line-height: 1.6; }
+  .item-card-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; }
+  .icon-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px; }
+
+  /* ── 汇总页 ── */
   .summary-title { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
+  .section-label { font-size: 12px; color: var(--gray); font-weight: 600;
+                   text-transform: uppercase; margin: 16px 0 8px; letter-spacing: .5px; }
   .field-row { display: flex; justify-content: space-between; align-items: flex-start;
-               padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+               padding: 9px 0; border-bottom: 1px solid #f5f5f5; }
   .field-row:last-child { border-bottom: none; }
-  .field-row .key   { font-size: 13px; color: var(--gray); flex-shrink: 0; width: 90px; }
+  .field-row .key   { font-size: 13px; color: var(--gray); flex-shrink: 0; width: 88px; }
   .field-row .value { font-size: 14px; color: #262626; text-align: right; flex: 1; word-break: break-all; }
-  .field-row .edit-link { font-size: 12px; color: var(--blue); margin-left: 8px;
-                           flex-shrink: 0; cursor: pointer; }
+  .field-row .edit-link { font-size: 12px; color: var(--blue); margin-left: 8px; flex-shrink: 0; cursor: pointer; }
 
   /* ── 成功页 ── */
-  .success-wrap { text-align: center; padding: 40px 16px; }
-  .success-icon { font-size: 64px; margin-bottom: 16px; }
+  .success-wrap { text-align: center; padding: 48px 16px 32px; }
+  .success-icon  { font-size: 64px; margin-bottom: 16px; }
   .success-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .success-sub   { font-size: 14px; color: var(--gray); margin-bottom: 28px; }
-
-  /* ── 候选词 ── */
-  .suggest-chip { display: inline-block; padding: 5px 12px; border-radius: 20px;
-                  background: #e6f4ff; border: 1px solid #91caff; color: #1677ff;
-                  font-size: 13px; cursor: pointer; transition: background .15s; }
-  .suggest-chip:active { background: #bae0ff; }
-  .suggest-label { font-size: 12px; color: var(--gray); width: 100%; margin-bottom: 2px; }
 
   /* ── Loading ── */
   .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45);
                       display: flex; flex-direction: column; align-items: center;
                       justify-content: center; z-index: 100; gap: 14px; color: #fff; }
   .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.3);
-             border-top-color: #fff; border-radius: 50%;
-             animation: spin .8s linear infinite; }
+             border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hidden { display: none !important; }
 </style>
@@ -113,16 +117,17 @@
 <!-- 顶部进度条 -->
 <div class="topbar">
   <h1>语音采购合同</h1>
-  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
-  <div class="step-label" id="stepLabel"></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+  <div class="step-label" id="stepLabel">加载中…</div>
 </div>
 
-<!-- 录音页 -->
-<div id="pageRecord">
+<!-- ── 录音页（甲方信息 + 每条货物字段共用）── -->
+<div id="pageRecord" class="hidden">
   <div class="card">
+    <div id="phaseBadge" class="phase-badge badge-header">甲方信息</div>
     <div class="field-label" id="fieldLabel"></div>
     <div class="field-hint"  id="fieldHint"></div>
-    <button class="tts-btn" id="ttsBtn" onclick="speakHint()">🔊 朗读提示</button>
+    <button class="tts-btn" onclick="speakHint()">🔊 朗读提示</button>
 
     <div class="rec-area">
       <button class="rec-btn" id="recBtn" onclick="toggleRecord()">🎤</button>
@@ -130,25 +135,44 @@
     </div>
 
     <div class="result-box">
+      <div id="suggestions" class="suggest-wrap hidden"></div>
       <label>识别结果（可手动修改）</label>
-      <div id="suggestions" style="display:none; margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>
       <input type="text" id="resultInput" placeholder="录音后自动填入…">
     </div>
   </div>
-
   <div style="margin: 0 16px;">
     <div class="nav-row">
-      <button class="btn btn-ghost"   onclick="goPrev()">← 上一项</button>
+      <button class="btn btn-ghost"   id="prevBtn" onclick="goPrev()">← 上一项</button>
       <button class="btn btn-primary" id="nextBtn" onclick="goNext()">下一项 →</button>
     </div>
   </div>
 </div>
 
-<!-- 汇总确认页 -->
+<!-- ── 货物清单页（每录完一条显示）── -->
+<div id="pageItemList" class="hidden">
+  <div class="card">
+    <div class="summary-title">货物清单</div>
+    <div id="itemListDisplay"></div>
+  </div>
+  <div style="margin: 0 16px 24px;">
+    <div class="nav-row">
+      <button class="btn btn-ghost" onclick="editLastItem()">修改最后一条</button>
+      <button class="btn btn-orange" onclick="startNewItem()">+ 添加商品</button>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="goToSummary()">
+      完成，确认所有信息 →
+    </button>
+  </div>
+</div>
+
+<!-- ── 汇总确认页 ── -->
 <div id="pageSummary" class="hidden">
   <div class="card">
     <div class="summary-title">确认合同信息</div>
-    <div id="summaryList"></div>
+    <div class="section-label">甲方信息</div>
+    <div id="summaryHeader"></div>
+    <div class="section-label">货物清单</div>
+    <div id="summaryItems"></div>
   </div>
   <div style="margin: 0 16px 24px;">
     <button class="btn btn-primary" style="width:100%;font-size:16px;" onclick="doGenerate()">
@@ -157,7 +181,7 @@
   </div>
 </div>
 
-<!-- 成功页 -->
+<!-- ── 成功页 ── -->
 <div id="pageSuccess" class="hidden">
   <div class="success-wrap">
     <div class="success-icon">✅</div>
@@ -179,138 +203,180 @@
 </div>
 
 <script>
-// ── 配置：后端地址（同源，不需要改）─────────────────────────────────
-const API = '';   // 空字符串 = 同域，前端由后端 /static 服务时自动正确
+const API = '';
 
-// ── 字段定义（从后端 /fields 拉取，此处写死作为备用）────────────────
-const VOICE_FIELDS = [
-  { key: '甲方名称',     label: '甲方公司名称',   hint: '请说出对方公司全称，例如：北京星辰科技有限公司' },
-  { key: '甲方联系人',   label: '甲方联系人姓名', hint: '请说出对方联系人姓名，例如：张伟' },
-  { key: '甲方电话',     label: '甲方联系电话',   hint: '请逐字说出电话号码，例如：一三八零零一三八零零零' },
-  { key: '货物品类',     label: '货物品类',       hint: '请说出设备类型，例如：笔记本电脑、服务器、交换机' },
-  { key: '货物品牌',     label: '货物品牌',       hint: '请说出品牌名称，例如：联想、戴尔、华为' },
-  { key: '货物型号',     label: '货物型号',       hint: '请说出具体型号，例如：ThinkPad X1 Carbon Gen12' },
-  { key: '货物规格',     label: '货物规格配置',   hint: '请说出主要配置，例如：十六G内存 五百一十二G固态' },
-  { key: '数量',         label: '采购数量',       hint: '请说出数量和单位，例如：五十台' },
-  { key: '合同金额数字', label: '合同总金额（元）',hint: '请说出合同金额，例如：四十九万元整' },
+// ── 字段定义 ──────────────────────────────────────────────────────────
+let HEADER_FIELDS = [
+  { key: '甲方名称',   label: '甲方公司名称', hint: '请说出对方公司全称，例如：北京星辰科技有限公司' },
+  { key: '甲方联系人', label: '甲方联系人',   hint: '请说出对方联系人姓名，例如：张伟' },
+  { key: '甲方电话',   label: '甲方联系电话', hint: '请逐字说出电话号码，例如：一三八零零一三八零零零' },
+];
+let ITEM_FIELDS = [
+  { key: '货物品类', label: '货物品类',       hint: '请说出设备类型，例如：笔记本电脑、服务器' },
+  { key: '货物品牌', label: '货物品牌',       hint: '请说出品牌名称，例如：联想、戴尔、华为' },
+  { key: '货物型号', label: '货物型号',       hint: '请说出具体型号，例如：ThinkPad X1 Carbon Gen12' },
+  { key: '货物规格', label: '货物规格配置',   hint: '请说出主要配置，例如：十六G内存 五百一十二G固态' },
+  { key: '数量',     label: '采购数量',       hint: '请说出数量和单位，例如：五十台' },
+  { key: '单价',     label: '单价（元）',     hint: '请说出单件价格，例如：九千八百元。不知道可直接点下一项跳过' },
 ];
 
 // ── 状态 ──────────────────────────────────────────────────────────────
-let currentIndex = 0;
-let answers      = {};
-let mediaRec     = null;
-let audioChunks  = [];
-let isRecording  = false;
-let fromSummary  = false;     // 从汇总页跳入单字段时为 true，完成后返回汇总
+let phase        = 'header';   // 'header' | 'item'
+let fieldIndex   = 0;
+let fromSummary  = false;
+let editingItem  = -1;         // -1 = 新增，>=0 = 编辑第N条
+
+let headerAnswers  = {};
+let itemList       = [];       // 已完成的货物列表
+let currentItem    = {};       // 正在录入的货物
+
+let mediaRec    = null;
+let audioChunks = [];
+let isRecording = false;
 
 // ── 初始化 ────────────────────────────────────────────────────────────
 function init() {
-  // 尝试从后端拉取字段，失败则用内置
-  fetch(API + '/fields')
-    .then(r => r.json())
-    .then(data => {
-      if (data.voice_fields && data.voice_fields.length) {
-        VOICE_FIELDS.length = 0;
-        data.voice_fields.forEach(f => VOICE_FIELDS.push(f));
-      }
-    })
-    .catch(() => {})
-    .finally(() => renderField(0));
+  fetch(API + '/fields').then(r => r.json()).then(data => {
+    if (data.header_fields) HEADER_FIELDS = data.header_fields;
+    if (data.item_fields)   ITEM_FIELDS   = data.item_fields;
+  }).catch(() => {}).finally(() => startHeader());
+}
+
+// ── 阶段：甲方信息 ────────────────────────────────────────────────────
+function startHeader() {
+  phase      = 'header';
+  fieldIndex = 0;
+  renderField();
+}
+
+function startNewItem() {
+  phase       = 'item';
+  fieldIndex  = 0;
+  editingItem = -1;
+  currentItem = {};
+  renderField();
+}
+
+function editLastItem() {
+  if (itemList.length === 0) return;
+  editingItem = itemList.length - 1;
+  currentItem = { ...itemList[editingItem] };
+  phase       = 'item';
+  fieldIndex  = 0;
+  renderField();
 }
 
 // ── 渲染字段 ──────────────────────────────────────────────────────────
-function renderField(idx) {
-  currentIndex = idx;
-  const f = VOICE_FIELDS[idx];
-  const total = VOICE_FIELDS.length;
+function currentFields() {
+  return phase === 'header' ? HEADER_FIELDS : ITEM_FIELDS;
+}
 
-  document.getElementById('progressBar').style.width = `${(idx / total) * 100}%`;
-  document.getElementById('stepLabel').textContent   = `第 ${idx + 1} 项 / 共 ${total} 项`;
-  document.getElementById('fieldLabel').textContent  = f.label;
-  document.getElementById('fieldHint').textContent   = f.hint;
-  document.getElementById('resultInput').value       = answers[f.key] || '';
-  document.getElementById('recStatus').textContent   = '点击麦克风开始录音';
-  document.getElementById('recStatus').className     = 'rec-status';
-  document.getElementById('recBtn').className        = 'rec-btn';
-  document.getElementById('suggestions').style.display = 'none';
+function renderField() {
+  const fields = currentFields();
+  const f      = fields[fieldIndex];
+  const total  = HEADER_FIELDS.length + (itemList.length + 1) * ITEM_FIELDS.length;
+  const done   = (phase === 'header' ? 0 : HEADER_FIELDS.length) + fieldIndex;
 
-  const nextBtn = document.getElementById('nextBtn');
-  if (fromSummary) {
-    nextBtn.textContent = '保存并返回确认 →';
+  document.getElementById('progressBar').style.width = `${(done / total) * 100}%`;
+
+  if (phase === 'header') {
+    document.getElementById('stepLabel').textContent =
+      `甲方信息  ${fieldIndex + 1} / ${HEADER_FIELDS.length}`;
+    document.getElementById('phaseBadge').textContent = '甲方信息';
+    document.getElementById('phaseBadge').className   = 'phase-badge badge-header';
   } else {
-    nextBtn.textContent = idx === total - 1 ? '完成，确认信息 →' : '下一项 →';
+    const itemNo = editingItem >= 0 ? editingItem + 1 : itemList.length + 1;
+    document.getElementById('stepLabel').textContent =
+      `第 ${itemNo} 条货物  ${fieldIndex + 1} / ${ITEM_FIELDS.length}`;
+    document.getElementById('phaseBadge').textContent = `第 ${itemNo} 条货物`;
+    document.getElementById('phaseBadge').className   = 'phase-badge badge-item';
+  }
+
+  document.getElementById('fieldLabel').textContent = f.label;
+  document.getElementById('fieldHint').textContent  = f.hint;
+
+  const existing = phase === 'header' ? headerAnswers[f.key] : currentItem[f.key];
+  document.getElementById('resultInput').value = existing || '';
+  document.getElementById('recStatus').textContent = '点击麦克风开始录音';
+  document.getElementById('recStatus').className   = 'rec-status';
+  document.getElementById('recBtn').className      = 'rec-btn';
+  document.getElementById('recBtn').textContent    = '🎤';
+  document.getElementById('suggestions').classList.add('hidden');
+
+  const isLast = fieldIndex === currentFields().length - 1;
+  if (fromSummary) {
+    document.getElementById('nextBtn').textContent = '保存并返回 →';
+  } else {
+    document.getElementById('nextBtn').textContent = isLast
+      ? (phase === 'header' ? '开始录货物 →' : '完成此条货物 →')
+      : '下一项 →';
+  }
+
+  // 单价字段可跳过
+  if (f.key === '单价') {
+    document.getElementById('nextBtn').textContent =
+      fromSummary ? '保存并返回 →' : '完成此条货物 →';
   }
 
   showPage('pageRecord');
   speakHint();
 }
 
-// ── TTS 朗读提示 ──────────────────────────────────────────────────────
+// ── TTS ───────────────────────────────────────────────────────────────
 function speakHint() {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(VOICE_FIELDS[currentIndex].hint);
-  utter.lang = 'zh-CN';
-  utter.rate = 0.9;
-  window.speechSynthesis.speak(utter);
+  const f = currentFields()[fieldIndex];
+  const u = new SpeechSynthesisUtterance(f.hint);
+  u.lang = 'zh-CN'; u.rate = 0.9;
+  window.speechSynthesis.speak(u);
 }
 
-// ── 录音控制 ──────────────────────────────────────────────────────────
+// ── 录音 ──────────────────────────────────────────────────────────────
 async function toggleRecord() {
-  if (isRecording) {
-    stopRecord();
-  } else {
-    await startRecord();
-  }
+  isRecording ? stopRecord() : await startRecord();
 }
 
 async function startRecord() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks  = [];
+    const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks    = [];
     const mimeType = getSupportedMime();
     mediaRec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     mediaRec.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
     mediaRec.onstop = () => { stream.getTracks().forEach(t => t.stop()); uploadAudio(); };
     mediaRec.start();
     isRecording = true;
-    document.getElementById('recBtn').className    = 'rec-btn recording';
-    document.getElementById('recBtn').textContent  = '⏹';
+    document.getElementById('recBtn').className   = 'rec-btn recording';
+    document.getElementById('recBtn').textContent = '⏹';
     document.getElementById('recStatus').textContent = '录音中… 点击停止';
-    document.getElementById('recStatus').className  = 'rec-status active';
+    document.getElementById('recStatus').className   = 'rec-status active';
   } catch (err) {
-    alert('无法访问麦克风：' + err.message + '\n请确保使用 HTTPS 或 localhost 访问。');
+    alert('无法访问麦克风：' + err.message + '\n请确保使用 HTTPS 访问。');
   }
 }
 
 function stopRecord() {
-  if (mediaRec && isRecording) {
-    mediaRec.stop();
-    isRecording = false;
-  }
+  if (mediaRec && isRecording) { mediaRec.stop(); isRecording = false; }
 }
 
 function getSupportedMime() {
-  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
-  return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+    .find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 
-// ── 上传音频识别 ──────────────────────────────────────────────────────
 async function uploadAudio() {
-  const fieldKey = VOICE_FIELDS[currentIndex].key;
-  const mime     = audioChunks[0]?.type || 'audio/webm';
-  const ext      = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'mp4' : 'webm';
-  const blob     = new Blob(audioChunks, { type: mime });
-
+  const f    = currentFields()[fieldIndex];
+  const mime = audioChunks[0]?.type || 'audio/webm';
+  const ext  = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(audioChunks, { type: mime });
   const form = new FormData();
   form.append('audio', blob, `audio.${ext}`);
   form.append('language', 'zh');
 
   showLoading('识别中…');
   try {
-    const resp = await fetch(`${API}/transcribe/${encodeURIComponent(fieldKey)}`, {
-      method: 'POST', body: form,
-    });
+    const resp = await fetch(`${API}/transcribe/${encodeURIComponent(f.key)}`, { method:'POST', body:form });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.detail || resp.statusText);
     document.getElementById('resultInput').value = data.text || '';
@@ -323,76 +389,174 @@ async function uploadAudio() {
     document.getElementById('recBtn').textContent = '🎤';
     document.getElementById('recStatus').textContent = '识别失败，请重录';
     document.getElementById('recStatus').className   = 'rec-status';
-  } finally {
-    hideLoading();
+  } finally { hideLoading(); }
+}
+
+// ── 候选词 ────────────────────────────────────────────────────────────
+function renderSuggestions(list) {
+  const box = document.getElementById('suggestions');
+  if (!list.length) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  box.innerHTML = '<span class="suggest-label">💡 知识库匹配，点击使用：</span>' +
+    list.map(s => `<span class="suggest-chip" onclick="applySuggestion('${s.text.replace(/'/g,"\\'")}')">${s.text}</span>`).join('');
+}
+function applySuggestion(text) {
+  document.getElementById('resultInput').value = text;
+  document.getElementById('suggestions').classList.add('hidden');
+}
+
+// ── 保存当前字段 ──────────────────────────────────────────────────────
+function saveField() {
+  const f   = currentFields()[fieldIndex];
+  const val = document.getElementById('resultInput').value.trim();
+  if (phase === 'header') {
+    if (val) headerAnswers[f.key] = val;
+  } else {
+    if (val) currentItem[f.key] = val;
   }
 }
 
-// ── 候选词渲染 ────────────────────────────────────────────────────────
-function renderSuggestions(list) {
-  const box = document.getElementById('suggestions');
-  if (!list || list.length === 0) { box.style.display = 'none'; return; }
-  box.style.display = 'flex';
-  box.innerHTML =
-    '<span class="suggest-label">💡 知识库匹配，点击使用：</span>' +
-    list.map(s =>
-      `<span class="suggest-chip" onclick="applySuggestion('${s.text.replace(/'/g, "\\'")}')">${s.text}</span>`
-    ).join('');
-}
-
-function applySuggestion(text) {
-  document.getElementById('resultInput').value = text;
-  document.getElementById('suggestions').style.display = 'none';
-}
-
 // ── 导航 ──────────────────────────────────────────────────────────────
-function saveCurrentAnswer() {
-  const key = VOICE_FIELDS[currentIndex].key;
-  const val = document.getElementById('resultInput').value.trim();
-  if (val) answers[key] = val;
-}
-
 function goPrev() {
-  saveCurrentAnswer();
+  saveField();
   if (fromSummary) {
     fromSummary = false;
-    showSummary();
-  } else if (currentIndex > 0) {
-    renderField(currentIndex - 1);
+    if (phase === 'header') showSummary();
+    else showItemList();
+    return;
+  }
+  if (fieldIndex > 0) {
+    fieldIndex--;
+    renderField();
+  } else if (phase === 'item') {
+    // 回到货物列表页
+    showItemList();
   }
 }
 
 function goNext() {
-  saveCurrentAnswer();
+  saveField();
   if (fromSummary) {
     fromSummary = false;
-    showSummary();
-  } else if (currentIndex < VOICE_FIELDS.length - 1) {
-    renderField(currentIndex + 1);
+    if (phase === 'header') showSummary();
+    else {
+      // 保存编辑中的 item
+      if (editingItem >= 0) itemList[editingItem] = { ...currentItem };
+      else itemList.push({ ...currentItem });
+      showItemList();
+    }
+    return;
+  }
+
+  if (fieldIndex < currentFields().length - 1) {
+    fieldIndex++;
+    renderField();
   } else {
-    showSummary();
+    // 到达当前阶段最后一个字段
+    if (phase === 'header') {
+      startNewItem();
+    } else {
+      // 完成一条货物
+      if (editingItem >= 0) itemList[editingItem] = { ...currentItem };
+      else itemList.push({ ...currentItem });
+      showItemList();
+    }
   }
 }
 
-function editFromSummary(idx) {
-  fromSummary = true;
-  renderField(idx);
+// ── 货物列表页 ────────────────────────────────────────────────────────
+function showItemList() {
+  editingItem = -1;
+  renderItemListDisplay();
+  document.getElementById('progressBar').style.width =
+    `${(HEADER_FIELDS.length / (HEADER_FIELDS.length + itemList.length * ITEM_FIELDS.length)) * 80}%`;
+  document.getElementById('stepLabel').textContent = `已添加 ${itemList.length} 条货物`;
+  showPage('pageItemList');
+}
+
+function renderItemListDisplay() {
+  const container = document.getElementById('itemListDisplay');
+  if (itemList.length === 0) {
+    container.innerHTML = '<div style="color:var(--gray);font-size:14px;padding:8px 0;">暂无货物，请添加</div>';
+    return;
+  }
+  container.innerHTML = itemList.map((item, i) => {
+    const title = [item.货物品牌, item.货物型号, item.货物品类].filter(Boolean).join(' ') || `第${i+1}条`;
+    const spec  = item.货物规格 ? `（${item.货物规格}）` : '';
+    const qty   = item.数量 || '';
+    const price = item.单价 ? `单价 ${item.单价} 元` : '';
+    const detail = [qty, price].filter(Boolean).join(' | ');
+    return `
+      <div class="item-card">
+        <div class="item-card-actions">
+          <button class="icon-btn" onclick="editItem(${i})" title="修改">✏️</button>
+          <button class="icon-btn" onclick="deleteItem(${i})" title="删除">🗑️</button>
+        </div>
+        <div class="item-card-title">${i+1}. ${title}${spec}</div>
+        ${detail ? `<div class="item-card-detail">${detail}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function editItem(i) {
+  editingItem = i;
+  currentItem = { ...itemList[i] };
+  phase       = 'item';
+  fieldIndex  = 0;
+  renderField();
+}
+
+function deleteItem(i) {
+  itemList.splice(i, 1);
+  renderItemListDisplay();
+  document.getElementById('stepLabel').textContent = `已添加 ${itemList.length} 条货物`;
 }
 
 // ── 汇总页 ────────────────────────────────────────────────────────────
-function showSummary() {
-  const list = document.getElementById('summaryList');
-  list.innerHTML = VOICE_FIELDS.map((f, i) => `
-    <div class="field-row">
-      <span class="key">${f.label}</span>
-      <span class="value">${answers[f.key] || '<span style="color:#bbb">未填写</span>'}</span>
-      <span class="edit-link" onclick="editFromSummary(${i})">修改</span>
-    </div>
-  `).join('');
+function goToSummary() {
+  if (itemList.length === 0) { alert('请至少添加一条货物'); return; }
+  showSummary();
+}
 
-  document.getElementById('progressBar').style.width = '100%';
+function showSummary() {
+  // 甲方信息
+  document.getElementById('summaryHeader').innerHTML =
+    HEADER_FIELDS.map((f, i) => `
+      <div class="field-row">
+        <span class="key">${f.label}</span>
+        <span class="value">${headerAnswers[f.key] || '<span style="color:#bbb">未填写</span>'}</span>
+        <span class="edit-link" onclick="editHeaderField(${i})">修改</span>
+      </div>`).join('');
+
+  // 货物清单
+  document.getElementById('summaryItems').innerHTML = itemList.map((item, i) => {
+    const title = [item.货物品牌, item.货物型号, item.货物品类].filter(Boolean).join(' ') || `第${i+1}条`;
+    const rows = ITEM_FIELDS.filter(f => f.key !== '货物品牌' && f.key !== '货物型号' && f.key !== '货物品类')
+      .map(f => `
+        <div class="field-row">
+          <span class="key">${f.label}</span>
+          <span class="value">${item[f.key] || '<span style="color:#bbb">—</span>'}</span>
+        </div>`).join('');
+    return `
+      <div style="border:1px solid #f0f0f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>${i+1}. ${title}</span>
+          <span class="edit-link" onclick="editItem(${i});fromSummary=true;">修改</span>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+
+  document.getElementById('progressBar').style.width = '95%';
   document.getElementById('stepLabel').textContent   = '确认信息';
   showPage('pageSummary');
+}
+
+function editHeaderField(i) {
+  fromSummary = true;
+  phase       = 'header';
+  fieldIndex  = i;
+  renderField();
 }
 
 // ── 生成合同 ──────────────────────────────────────────────────────────
@@ -402,51 +566,39 @@ async function doGenerate() {
     const resp = await fetch(`${API}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contract_type: '采购合同', voice_data: answers }),
+      body: JSON.stringify({ contract_type: '采购合同', voice_data: headerAnswers, items: itemList }),
     });
-    if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.detail || resp.statusText);
-    }
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || resp.statusText); }
     const { token, filename } = await resp.json();
-    const downloadUrl = `${API}/download/${token}`;
 
-    document.getElementById('downloadBtn').href         = downloadUrl;
+    document.getElementById('downloadBtn').href            = `${API}/download/${token}`;
     document.getElementById('successFilename').textContent = filename;
+    document.getElementById('progressBar').style.width    = '100%';
+    document.getElementById('stepLabel').textContent      = '完成';
     showPage('pageSuccess');
-    document.getElementById('progressBar').style.width = '100%';
-    document.getElementById('stepLabel').textContent   = '完成';
   } catch (err) {
     alert('生成失败：' + err.message);
-  } finally {
-    hideLoading();
-  }
+  } finally { hideLoading(); }
 }
 
-// ── 重新录入 ──────────────────────────────────────────────────────────
+// ── 重置 ──────────────────────────────────────────────────────────────
 function restart() {
-  answers      = {};
-  currentIndex = 0;
-  renderField(0);
+  headerAnswers = {}; itemList = []; currentItem = {};
+  phase = 'header'; fieldIndex = 0; fromSummary = false; editingItem = -1;
+  startHeader();
 }
 
-// ── 工具函数 ──────────────────────────────────────────────────────────
+// ── 工具 ──────────────────────────────────────────────────────────────
 function showPage(id) {
-  ['pageRecord', 'pageSummary', 'pageSuccess'].forEach(p => {
-    document.getElementById(p).classList.toggle('hidden', p !== id);
-  });
+  ['pageRecord','pageItemList','pageSummary','pageSuccess'].forEach(p =>
+    document.getElementById(p).classList.toggle('hidden', p !== id));
 }
-
 function showLoading(text) {
   document.getElementById('loadingText').textContent = text;
   document.getElementById('loading').classList.remove('hidden');
 }
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
 
-function hideLoading() {
-  document.getElementById('loading').classList.add('hidden');
-}
-
-// ── 启动 ──────────────────────────────────────────────────────────────
 init();
 </script>
 </body>

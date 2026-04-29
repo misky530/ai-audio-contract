@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from io import BytesIO
 
 from contract import generate_contract, list_templates
-from mock_data import VOICE_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VOICE_INPUT, auto_generate
+from mock_data import HEADER_FIELDS, ITEM_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VOICE_INPUT, MOCK_ITEMS, auto_generate
 from vocab import get_prompt
 from stt import transcribe_bytes, STT_BACKEND
 import knowledge as kb
@@ -41,11 +41,13 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="st
 class VoiceInput(BaseModel):
     contract_type: str = "采购合同"
     voice_data: dict
+    items: list[dict] = []
     model_config = {
         "json_schema_extra": {
             "example": {
                 "contract_type": "采购合同",
                 "voice_data": MOCK_VOICE_INPUT,
+                "items": MOCK_ITEMS,
             }
         }
     }
@@ -63,10 +65,10 @@ def get_templates():
 @app.get("/fields", summary="语音输入字段清单")
 def get_fields():
     return {
-        "voice_fields": VOICE_FIELDS,
-        "our_company":  OUR_COMPANY,
-        "defaults":     DEFAULTS,
-        "total_voice":  len(VOICE_FIELDS),
+        "header_fields": HEADER_FIELDS,
+        "item_fields":   ITEM_FIELDS,
+        "our_company":   OUR_COMPANY,
+        "defaults":      DEFAULTS,
     }
 
 @app.get("/vocab/{field_key}", summary="获取字段的 Whisper 词库")
@@ -109,7 +111,7 @@ async def transcribe_field(
 # ── 生成合同 ──────────────────────────────────────────────────────────
 @app.post("/generate", summary="传入字段数据，生成合同文件（返回下载 token）")
 def generate(req: VoiceInput):
-    fields = auto_generate(req.voice_data)
+    fields = auto_generate(req.voice_data, req.items or None)
     try:
         buf = generate_contract(req.contract_type, fields)
     except (ValueError, FileNotFoundError) as e:
@@ -136,7 +138,7 @@ def download(token: str):
 
 @app.post("/generate/mock", summary="mock 数据一键生成（测试）")
 def generate_mock(contract_type: str = "采购合同"):
-    fields = auto_generate(MOCK_VOICE_INPUT)
+    fields = auto_generate(MOCK_VOICE_INPUT, MOCK_ITEMS)
     try:
         buf = generate_contract(contract_type, fields)
     except (ValueError, FileNotFoundError) as e:
