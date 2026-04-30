@@ -7,57 +7,68 @@ export interface RecorderEvents {
     onStop?: (tempFilePath: string) => void;
 }
 
-class VoiceRecorder {
-    private recorder: wx.RecorderManager | null = null;
-    private tempFilePath: string = '';
-    private events: RecorderEvents = {};
+function VoiceRecorder() {
+    var recorder: wx.RecorderManager | null = null;
+    var tempFilePath: string = '';
+    var events: RecorderEvents = {};
 
-    constructor() {
-        this.recorder = wx.getRecorderManager();
-        this.setupListeners();
-    }
+    function setupListeners() {
+        if (!recorder) return;
 
-    private setupListeners(): void {
-        if (!this.recorder) return;
-
-        this.recorder.onStart(() => {
+        recorder.onStart(function () {
             console.log('[Recorder] 录音开始');
-            this.tempFilePath = '';
-            this.events.onStateChange?.('recording');
-        });
-
-        this.recorder.onStop((res) => {
-            console.log('[Recorder] 录音停止，文件路径:', res.tempFilePath);
-            this.tempFilePath = res.tempFilePath || '';
-            this.events.onStateChange?.('processing');
-            if (this.tempFilePath) {
-                this.events.onStop?.(this.tempFilePath);
-            } else {
-                this.events.onError?.('录音文件生成失败');
-                this.events.onStateChange?.('idle');
+            tempFilePath = '';
+            if (events.onStateChange) {
+                events.onStateChange('recording');
             }
         });
 
-        this.recorder.onError((err) => {
-            const errorMsg = err.errMsg || '录音失败';
+        recorder.onStop(function (res) {
+            console.log('[Recorder] 录音停止，文件路径:', res.tempFilePath);
+            tempFilePath = res.tempFilePath || '';
+            if (events.onStateChange) {
+                events.onStateChange('processing');
+            }
+            if (tempFilePath) {
+                if (events.onStop) {
+                    events.onStop(tempFilePath);
+                }
+            } else {
+                if (events.onError) {
+                    events.onError('录音文件生成失败');
+                }
+                if (events.onStateChange) {
+                    events.onStateChange('idle');
+                }
+            }
+        });
+
+        recorder.onError(function (err) {
+            var errorMsg = err.errMsg || '录音失败';
             console.error('[Recorder] 录音错误:', errorMsg);
-            this.events.onError?.(errorMsg);
-            this.events.onStateChange?.('idle');
+            if (events.onError) {
+                events.onError(errorMsg);
+            }
+            if (events.onStateChange) {
+                events.onStateChange('idle');
+            }
         });
     }
 
-    setEvents(events: RecorderEvents): void {
-        this.events = events;
+    function setEvts(evts: RecorderEvents) {
+        events = evts;
     }
 
-    startRecording(): void {
-        if (!this.recorder) {
-            this.events.onError?.('录音模块不可用');
+    function startRecording() {
+        if (!recorder) {
+            if (events.onError) {
+                events.onError('录音模块不可用');
+            }
             return;
         }
 
         try {
-            this.recorder.start({
+            recorder.start({
                 format: 'mp3',
                 sampleRate: 16000,
                 numberOfChannels: 1,
@@ -66,29 +77,41 @@ class VoiceRecorder {
             });
             console.log('[Recorder] 开始录音');
         } catch (err) {
-            const errorMsg = '无法访问麦克风，请检查权限设置';
+            var errorMsg = '无法访问麦克风，请检查权限设置';
             console.error('[Recorder] 启动录音失败:', err);
-            this.events.onError?.(errorMsg);
+            if (events.onError) {
+                events.onError(errorMsg);
+            }
         }
     }
 
-    stopRecording(): void {
-        if (this.recorder) {
-            this.recorder.stop();
+    function stopRecording() {
+        if (recorder) {
+            recorder.stop();
             console.log('[Recorder] 请求停止录音');
         }
     }
 
-    getTempFilePath(): string {
-        return this.tempFilePath;
+    function getTempFilePath() {
+        return tempFilePath;
     }
+
+    recorder = wx.getRecorderManager();
+    setupListeners();
+
+    return {
+        setEvents: setEvts,
+        startRecording: startRecording,
+        stopRecording: stopRecording,
+        getTempFilePath: getTempFilePath,
+    };
 }
 
-let recorderInstance: VoiceRecorder | null = null;
+var recorderInstance: any = null;
 
-export function getVoiceRecorder(): VoiceRecorder {
+export function getVoiceRecorder(): any {
     if (!recorderInstance) {
-        recorderInstance = new VoiceRecorder();
+        recorderInstance = VoiceRecorder();
     }
     return recorderInstance;
 }

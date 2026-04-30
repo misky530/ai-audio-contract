@@ -1,6 +1,6 @@
 import type { Phase, PageType } from '../types/contract';
 
-const STORAGE_KEY = 'contract_data';
+var STORAGE_KEY = 'contract_data';
 
 export interface ContractStore {
     phase: Phase;
@@ -13,7 +13,7 @@ export interface ContractStore {
     lastFilename: string;
 }
 
-const defaultStore: ContractStore = {
+var defaultStore: ContractStore = {
     phase: 'header',
     fieldIndex: 0,
     fromSummary: false,
@@ -26,20 +26,18 @@ const defaultStore: ContractStore = {
 
 export function getStore(): ContractStore {
     try {
-        const data = wx.getStorageSync(STORAGE_KEY);
+        var data = wx.getStorageSync(STORAGE_KEY);
         if (data) {
-            return { ...defaultStore, ...data };
+            return Object.assign({}, defaultStore, data);
         }
-    } catch {
-    }
-    return { ...defaultStore };
+    } catch (e) { }
+    return Object.assign({}, defaultStore);
 }
 
 function saveStore(store: ContractStore): void {
     try {
         wx.setStorageSync(STORAGE_KEY, store);
-    } catch {
-    }
+    } catch (e) { }
 }
 
 export function getCurrentPhase(): Phase {
@@ -51,7 +49,7 @@ export function getFieldIndex(): number {
 }
 
 export function setFieldIndex(index: number): void {
-    const store = getStore();
+    var store = getStore();
     store.fieldIndex = index;
     saveStore(store);
 }
@@ -61,7 +59,7 @@ export function getFromSummary(): boolean {
 }
 
 export function setFromSummary(value: boolean): void {
-    const store = getStore();
+    var store = getStore();
     store.fromSummary = value;
     saveStore(store);
 }
@@ -71,7 +69,7 @@ export function getEditingItem(): number {
 }
 
 export function setEditingItem(index: number): void {
-    const store = getStore();
+    var store = getStore();
     store.editingItem = index;
     saveStore(store);
 }
@@ -81,7 +79,7 @@ export function getHeaderAnswers(): Record<string, string> {
 }
 
 export function setHeaderAnswer(key: string, value: string): void {
-    const store = getStore();
+    var store = getStore();
     if (value) {
         store.headerAnswers[key] = value;
     } else {
@@ -95,7 +93,7 @@ export function getItemList(): Record<string, string>[] {
 }
 
 export function addItem(item: Record<string, string>): void {
-    const store = getStore();
+    var store = getStore();
     if (store.editingItem >= 0) {
         store.itemList[store.editingItem] = item;
     } else {
@@ -105,7 +103,7 @@ export function addItem(item: Record<string, string>): void {
 }
 
 export function updateItem(index: number, item: Record<string, string>): void {
-    const store = getStore();
+    var store = getStore();
     if (index >= 0 && index < store.itemList.length) {
         store.itemList[index] = item;
         saveStore(store);
@@ -113,7 +111,7 @@ export function updateItem(index: number, item: Record<string, string>): void {
 }
 
 export function removeItem(index: number): void {
-    const store = getStore();
+    var store = getStore();
     store.itemList.splice(index, 1);
     saveStore(store);
 }
@@ -123,13 +121,13 @@ export function getCurrentItem(): Record<string, string> {
 }
 
 export function setCurrentItem(item: Record<string, string>): void {
-    const store = getStore();
+    var store = getStore();
     store.currentItem = item;
     saveStore(store);
 }
 
 export function setPhase(phase: Phase): void {
-    const store = getStore();
+    var store = getStore();
     store.phase = phase;
     saveStore(store);
 }
@@ -139,13 +137,13 @@ export function getLastFilename(): string {
 }
 
 export function setLastFilename(filename: string): void {
-    const store = getStore();
+    var store = getStore();
     store.lastFilename = filename;
     saveStore(store);
 }
 
 export function startHeader(): void {
-    const store = getStore();
+    var store = getStore();
     store.phase = 'header';
     store.fieldIndex = 0;
     store.fromSummary = false;
@@ -155,7 +153,7 @@ export function startHeader(): void {
 }
 
 export function startNewItem(): void {
-    const store = getStore();
+    var store = getStore();
     store.phase = 'item';
     store.fieldIndex = 0;
     store.editingItem = -1;
@@ -164,9 +162,9 @@ export function startNewItem(): void {
 }
 
 export function editItem(index: number): void {
-    const store = getStore();
+    var store = getStore();
     store.editingItem = index;
-    store.currentItem = { ...store.itemList[index] };
+    store.currentItem = Object.assign({}, store.itemList[index]);
     store.phase = 'item';
     store.fieldIndex = 0;
     store.fromSummary = false;
@@ -174,13 +172,13 @@ export function editItem(index: number): void {
 }
 
 export function editLastItem(): void {
-    const store = getStore();
+    var store = getStore();
     if (store.itemList.length === 0) return;
     editItem(store.itemList.length - 1);
 }
 
 export function saveField(key: string, value: string): void {
-    const store = getStore();
+    var store = getStore();
     if (store.phase === 'header') {
         if (value) {
             store.headerAnswers[key] = value;
@@ -194,11 +192,11 @@ export function saveField(key: string, value: string): void {
 }
 
 export function saveCurrentItem(): void {
-    const store = getStore();
+    var store = getStore();
     if (store.editingItem >= 0) {
-        store.itemList[store.editingItem] = { ...store.currentItem };
+        store.itemList[store.editingItem] = Object.assign({}, store.currentItem);
     } else {
-        store.itemList.push({ ...store.currentItem });
+        store.itemList.push(Object.assign({}, store.currentItem));
     }
     saveStore(store);
 }
@@ -206,29 +204,33 @@ export function saveCurrentItem(): void {
 export function resetStore(): void {
     try {
         wx.removeStorageSync(STORAGE_KEY);
-    } catch {
-    }
+    } catch (e) { }
 }
 
 export function navigateTo(page: PageType, params?: Record<string, string>): void {
-    const pages: Record<PageType, string> = {
+    var pages: Record<string, string> = {
         record: '/pages/contract/record/record',
         itemlist: '/pages/contract/itemlist/itemlist',
         summary: '/pages/contract/summary/summary',
         success: '/pages/contract/success/success',
     };
 
-    let url = pages[page];
+    var url = pages[page];
     if (params) {
-        const query = Object.entries(params)
-            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-            .join('&');
-        url += `?${query}`;
+        var queryParts: string[] = [];
+        for (var key in params) {
+            if (params.hasOwnProperty(key)) {
+                queryParts.push(key + '=' + encodeURIComponent(params[key]));
+            }
+        }
+        if (queryParts.length > 0) {
+            url = url + '?' + queryParts.join('&');
+        }
     }
 
     if (page === 'record') {
-        wx.redirectTo({ url });
+        wx.redirectTo({ url: url });
     } else {
-        wx.navigateTo({ url });
+        wx.navigateTo({ url: url });
     }
 }

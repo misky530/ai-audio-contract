@@ -1,6 +1,6 @@
 import type { Field, HeaderData, ItemData, TranscribeResponse } from '../types/contract';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://quarters-fresh-aggregate.ngrok-free.dev';
 
 const HEADER_FIELDS: Field[] = [
     { key: '甲方名称', label: '甲方公司名称', hint: '请说出对方公司全称，例如：北京星辰科技有限公司' },
@@ -30,7 +30,8 @@ function request<T>(options: {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     resolve(res.data as T);
                 } else {
-                    const errMsg = (res.data as any)?.detail || `请求失败: ${res.statusCode}`;
+                    const data = res.data as any;
+                    const errMsg = (data && data.detail) ? data.detail : '请求失败: ' + res.statusCode;
                     reject(new Error(errMsg));
                 }
             },
@@ -44,7 +45,7 @@ function request<T>(options: {
 export async function fetchFields(): Promise<{ header_fields: Field[]; item_fields: Field[] }> {
     try {
         const data = await request<{ header_fields: Field[]; item_fields: Field[] }>({
-            url: `${API_BASE}/fields`,
+            url: API_BASE + '/fields',
         });
         return {
             header_fields: data.header_fields || HEADER_FIELDS,
@@ -60,25 +61,25 @@ export async function transcribeAudio(
     fieldKey: string,
     language: string = 'zh'
 ): Promise<TranscribeResponse> {
-    console.log(`[API] 开始上传音频: ${audioFilePath}, fieldKey: ${fieldKey}`);
+    console.log('[API] 开始上传音频: ' + audioFilePath + ', fieldKey: ' + fieldKey);
 
-    return new Promise((resolve, reject) => {
-        const fileName = `audio_${Date.now()}.mp3`;
+    return new Promise(function (resolve, reject) {
+        var fileName = 'audio_' + Date.now() + '.mp3';
 
         wx.uploadFile({
-            url: `${API_BASE}/transcribe/${encodeURIComponent(fieldKey)}`,
+            url: API_BASE + '/transcribe/' + encodeURIComponent(fieldKey),
             filePath: audioFilePath,
             name: 'audio',
             fileName: fileName,
             formData: {
                 language: language,
             },
-            success: (res) => {
-                console.log(`[API] 上传响应: status=${res.statusCode}, data=${res.data}`);
+            success: function (res) {
+                console.log('[API] 上传响应: status=' + res.statusCode + ', data=' + res.data);
 
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     try {
-                        const data = JSON.parse(res.data) as TranscribeResponse;
+                        var data = JSON.parse(res.data);
                         console.log('[API] 识别成功:', data.text);
                         resolve(data);
                     } catch (parseErr) {
@@ -86,10 +87,10 @@ export async function transcribeAudio(
                         reject(new Error('解析响应失败'));
                     }
                 } else {
-                    let errorMsg = `识别失败: ${res.statusCode}`;
+                    var errorMsg = '识别失败: ' + res.statusCode;
                     try {
-                        const data = JSON.parse(res.data);
-                        errorMsg = data.detail || data.message || errorMsg;
+                        var data = JSON.parse(res.data);
+                        errorMsg = (data && (data.detail || data.message)) ? (data.detail || data.message) : errorMsg;
                     } catch (e) {
                         errorMsg = res.data || errorMsg;
                     }
@@ -97,8 +98,8 @@ export async function transcribeAudio(
                     reject(new Error(errorMsg));
                 }
             },
-            fail: (err) => {
-                const errorMsg = err.errMsg || '上传音频失败';
+            fail: function (err) {
+                var errorMsg = err.errMsg || '上传音频失败';
                 console.error('[API] 上传失败:', errorMsg);
                 reject(new Error(errorMsg));
             },
@@ -113,46 +114,69 @@ export async function generateContract(
 ): Promise<{ blob: ArrayBuffer; filename: string }> {
     console.log('[API] 开始生成合同');
 
-    return new Promise((resolve, reject) => {
+    var formattedItems = items.map(function (item) {
+        return {
+            "单价": item['单价'] || '',
+            "数量": item['数量'] || '',
+            "货物品牌": item['货物品牌'] || '',
+            "货物品类": item['货物品类'] || '',
+            "货物型号": item['货物型号'] || '',
+            "货物规格": item['货物规格'] || '',
+        };
+    });
+
+    var formattedVoiceData = {
+        "甲方名称": voiceData['甲方名称'] || '',
+        "甲方地址": voiceData['甲方地址'] || '',
+        "甲方电话": voiceData['甲方电话'] || '',
+        "甲方联系人": voiceData['甲方联系人'] || '',
+    };
+
+    var requestData = {
+        contract_type: contractType,
+        items: formattedItems,
+        voice_data: formattedVoiceData,
+    };
+
+    console.log('[API] 请求数据:', JSON.stringify(requestData));
+    console.log('[API] 货物数量:', formattedItems.length);
+
+    return new Promise(function (resolve, reject) {
         wx.request({
-            url: `${API_BASE}/generate`,
+            url: API_BASE + '/generate',
             method: 'POST',
             header: {
                 'Content-Type': 'application/json',
                 'ngrok-skip-browser-warning': '1',
             },
-            data: {
-                contract_type: contractType,
-                voice_data: voiceData,
-                items: items,
-            },
+            data: requestData,
             responseType: 'arraybuffer',
-            success: (res) => {
-                console.log(`[API] 生成响应: status=${res.statusCode}`);
+            success: function (res) {
+                console.log('[API] 生成响应: status=' + res.statusCode);
 
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    const cd = res.header?.['Content-Disposition'] || '';
-                    const match = cd.match(/filename\*=UTF-8''(.+)/);
-                    const filename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
+                    var cd = (res.header && res.header['Content-Disposition']) ? res.header['Content-Disposition'] : '';
+                    var match = cd.match(/filename\*=UTF-8''(.+)/);
+                    var filename = match ? decodeURIComponent(match[1]) : '采购合同.docx';
                     console.log('[API] 生成成功:', filename);
                     resolve({
                         blob: res.data as ArrayBuffer,
-                        filename,
+                        filename: filename,
                     });
                 } else {
-                    let errorMsg = `生成失败: ${res.statusCode}`;
+                    var errorMsg = '生成失败: ' + res.statusCode;
                     try {
-                        const jsonData = JSON.parse(
-                            String.fromCharCode.apply(null, new Uint8Array(res.data as ArrayBuffer))
-                        );
-                        errorMsg = jsonData.detail || errorMsg;
-                    } catch { }
+                        var uint8Array = new Uint8Array(res.data as ArrayBuffer);
+                        var jsonStr = String.fromCharCode.apply(null, uint8Array as any);
+                        var jsonData = JSON.parse(jsonStr);
+                        errorMsg = (jsonData && jsonData.detail) ? jsonData.detail : errorMsg;
+                    } catch (e) { }
                     console.error('[API] 生成失败:', errorMsg);
                     reject(new Error(errorMsg));
                 }
             },
-            fail: (err) => {
-                const errorMsg = err.errMsg || '生成请求失败';
+            fail: function (err) {
+                var errorMsg = err.errMsg || '生成请求失败';
                 console.error('[API] 生成请求失败:', errorMsg);
                 reject(new Error(errorMsg));
             },

@@ -11,22 +11,28 @@
     <view wx:if="{{itemList.length === 0}}" class="empty-tip">暂无货物，请添加</view>
 
     <view wx:for="{{itemList}}" wx:key="index" class="item-card">
-      <view class="item-card-actions">
-        <button class="icon-btn" bindtap="editItem" data-index="{{index}}" hover-class="none">✏️</button>
-        <button class="icon-btn" bindtap="deleteItem" data-index="{{index}}" hover-class="none">🗑️</button>
+      <view class="item-card-left">
+        <view class="item-index">{{index + 1}}</view>
+        <view class="item-info">
+          <view class="item-card-title">{{itemTitles[index]}}</view>
+          <view wx:if="{{itemDetails[index]}}" class="item-card-detail">{{itemDetails[index]}}</view>
+        </view>
       </view>
-      <view class="item-card-title">{{index + 1}}. {{itemTitles[index]}}</view>
-      <view wx:if="{{itemDetails[index]}}" class="item-card-detail">{{itemDetails[index]}}</view>
+      <view class="item-card-right">
+        <view class="action-btns">
+          <view class="action-btn" bindtap="deleteItem" data-index="{{index}}">
+            <text class="action-icon">🗑️</text>
+          </view>
+          <view class="action-btn" bindtap="editItem" data-index="{{index}}">
+            <text class="action-icon">✏️</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </view>
 
-<view class="bottom-container">
-  <view class="nav-row">
-    <button class="btn btn-ghost" bindtap="editLastItem">修改最后一条</button>
-    <button class="btn btn-orange" bindtap="startNewItem">+ 添加商品</button>
-  </view>
-  <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" bindtap="goToSummary">
-    完成，确认所有信息 →
-  </button>
+<view class="bottom-area">
+  <view class="btn btn-orange" bindtap="startNewItem">+ 添加商品</view>
+  <view class="btn btn-primary" bindtap="goToSummary">完成，确认所有信息 →</view>
 </view>

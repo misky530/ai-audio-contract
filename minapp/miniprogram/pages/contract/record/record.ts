@@ -1,122 +1,117 @@
-import type { Field } from '../../../types/contract';
 import { HEADER_FIELDS, ITEM_FIELDS, transcribeAudio } from '../../../services/api';
-import { getVoiceRecorder, releaseVoiceRecorder, type RecordState } from '../../../services/recorder';
+import { getVoiceRecorder, releaseVoiceRecorder } from '../../../services/recorder';
 import {
     getStore,
     saveField,
     saveCurrentItem,
     startNewItem,
-    editLastItem,
     setFromSummary,
+    setFieldIndex,
     navigateTo,
 } from '../../../services/store';
 
-interface Suggestion {
-    text: string;
-}
-
 Page({
     data: {
-        phase: 'header' as 'header' | 'item',
+        phase: 'header',
         fieldIndex: 0,
         fromSummary: false,
         editingItem: -1,
-        currentField: {} as Field,
+        currentField: {},
         progress: 0,
         stepLabel: '',
         nextBtnText: '',
         itemNo: 1,
         resultText: '',
-        recordState: 'idle' as RecordState,
+        recordState: 'idle',
         recordStatusText: '点击麦克风开始录音',
-        suggestions: [] as Suggestion[],
+        suggestions: [],
         showLoading: false,
         loadingText: '识别中…',
     },
 
-    private: {
-        recorder: null as any,
-        fields: [] as Field[],
-        headerFields: HEADER_FIELDS,
-        itemFields: ITEM_FIELDS,
-    },
+    _recorder: null,
+    _fields: [],
+    _headerFields: HEADER_FIELDS,
+    _itemFields: ITEM_FIELDS,
 
-    onLoad() {
+    onLoad: function () {
         console.log('[RecordPage] 页面加载');
-        this.private.fields = this.private.headerFields;
+        this._fields = this._headerFields;
         this.initRecorder();
         this.renderField();
     },
 
-    onUnload() {
+    onUnload: function () {
         console.log('[RecordPage] 页面卸载');
         releaseVoiceRecorder();
     },
 
-    initRecorder() {
-        const recorder = getVoiceRecorder();
-        this.private.recorder = recorder;
+    initRecorder: function () {
+        var self = this;
+        var recorder = getVoiceRecorder();
+        this._recorder = recorder;
 
         recorder.setEvents({
-            onStateChange: (state: RecordState) => {
+            onStateChange: function (state) {
                 console.log('[RecordPage] 录音状态变化:', state);
-                this.setData({ recordState: state });
+                self.setData({ recordState: state });
 
                 if (state === 'recording') {
-                    this.setData({ recordStatusText: '录音中… 点击停止' });
+                    self.setData({ recordStatusText: '录音中… 点击停止' });
                 } else if (state === 'processing') {
-                    this.setData({ recordStatusText: '识别中…' });
+                    self.setData({ recordStatusText: '识别中…' });
                 } else {
-                    this.setData({ recordStatusText: '点击麦克风开始录音' });
+                    self.setData({ recordStatusText: '点击麦克风开始录音' });
                 }
             },
-            onStop: (tempFilePath: string) => {
+            onStop: function (tempFilePath) {
                 console.log('[RecordPage] 录音停止，文件路径:', tempFilePath);
                 if (tempFilePath) {
-                    this.uploadAudio(tempFilePath);
+                    self.uploadAudio(tempFilePath);
                 } else {
                     wx.showToast({ title: '录音文件生成失败', icon: 'none' });
-                    this.setData({ recordState: 'idle', recordStatusText: '录音失败，请重试' });
+                    self.setData({ recordState: 'idle', recordStatusText: '录音失败，请重试' });
                 }
             },
-            onResult: (text: string) => {
-                this.setData({ resultText: text });
-                this.setData({ recordStatusText: '识别完成，可修改后继续' });
+            onResult: function (text) {
+                self.setData({ resultText: text });
+                self.setData({ recordStatusText: '识别完成，可修改后继续' });
             },
-            onError: (error: string) => {
+            onError: function (error) {
                 console.error('[RecordPage] 录音错误:', error);
                 wx.showToast({ title: error, icon: 'none' });
-                this.setData({ recordStatusText: '录音失败，请重试' });
+                self.setData({ recordStatusText: '录音失败，请重试' });
             },
         });
     },
 
-    renderField() {
-        const store = getStore();
-        const phase = store.phase;
-        const fieldIndex = store.fieldIndex;
-        const fields = phase === 'header' ? this.private.headerFields : this.private.itemFields;
-        this.private.fields = fields;
+    renderField: function () {
+        var self = this;
+        var store = getStore();
+        var phase = store.phase;
+        var fieldIndex = store.fieldIndex;
+        var fields = phase === 'header' ? this._headerFields : this._itemFields;
+        this._fields = fields;
 
-        const currentField = fields[fieldIndex] || fields[0];
-        const totalFields = this.private.headerFields.length + store.itemList.length * this.private.itemFields.length;
-        const done = (phase === 'header' ? 0 : this.private.headerFields.length) + fieldIndex;
-        const progress = totalFields > 0 ? (done / totalFields) * 100 : 0;
+        var currentField = fields[fieldIndex] || fields[0];
+        var totalFields = this._headerFields.length + store.itemList.length * this._itemFields.length;
+        var done = (phase === 'header' ? 0 : this._headerFields.length) + fieldIndex;
+        var progress = totalFields > 0 ? (done / totalFields) * 100 : 0;
 
-        let stepLabel = '';
+        var stepLabel = '';
         if (phase === 'header') {
-            stepLabel = `甲方信息 ${fieldIndex + 1} / ${this.private.headerFields.length}`;
+            stepLabel = '甲方信息 ' + (fieldIndex + 1) + ' / ' + this._headerFields.length;
         } else {
-            const itemNo = store.editingItem >= 0 ? store.editingItem + 1 : store.itemList.length + 1;
-            stepLabel = `第 ${itemNo} 条货物 ${fieldIndex + 1} / ${this.private.itemFields.length}`;
+            var itemNo = store.editingItem >= 0 ? store.editingItem + 1 : store.itemList.length + 1;
+            stepLabel = '第 ' + itemNo + ' 条货物 ' + (fieldIndex + 1) + ' / ' + this._itemFields.length;
         }
 
-        const existing = phase === 'header'
+        var existing = phase === 'header'
             ? store.headerAnswers[currentField.key]
             : store.currentItem[currentField.key];
 
-        const isLast = fieldIndex === fields.length - 1;
-        let nextBtnText = isLast
+        var isLast = fieldIndex === fields.length - 1;
+        var nextBtnText = isLast
             ? (phase === 'header' ? '开始录货物 →' : '完成此条货物 →')
             : '下一项 →';
 
@@ -128,84 +123,127 @@ Page({
             nextBtnText = '保存并返回 →';
         }
 
-        const itemNo = store.editingItem >= 0 ? store.editingItem + 1 : store.itemList.length + 1;
+        var itemNo = store.editingItem >= 0 ? store.editingItem + 1 : store.itemList.length + 1;
 
         this.setData({
-            phase,
-            fieldIndex,
+            phase: phase,
+            fieldIndex: fieldIndex,
             fromSummary: store.fromSummary,
             editingItem: store.editingItem,
-            currentField,
-            progress,
-            stepLabel,
-            nextBtnText,
-            itemNo,
+            currentField: currentField,
+            progress: progress,
+            stepLabel: stepLabel,
+            nextBtnText: nextBtnText,
+            itemNo: itemNo,
             resultText: existing || '',
             suggestions: [],
         });
     },
 
-    speakHint() {
+    speakHint: function () {
         if (!wx.canIUse('createInnerAudioContext')) {
             wx.showToast({ title: '当前版本不支持朗读功能', icon: 'none' });
             return;
         }
 
-        const innerAudioContext = wx.createInnerAudioContext();
-        const field = this.data.currentField;
+        var innerAudioContext = wx.createInnerAudioContext();
+        var field = this.data.currentField;
 
-        innerAudioContext.onError = () => {
+        innerAudioContext.onError(function () {
             wx.showToast({ title: '朗读失败', icon: 'none' });
             innerAudioContext.destroy();
-        };
+        });
 
-        innerAudioContext.onPlay = () => {
-            setTimeout(() => {
+        innerAudioContext.onPlay(function () {
+            setTimeout(function () {
                 innerAudioContext.destroy();
             }, 5000);
-        };
+        });
 
-        const hint = field.hint;
-        const speakText = hint.replace(/例如：/g, '').replace(/例如/g, '');
+        var hint = field.hint;
+        var speakText = hint.replace(/例如：/g, '').replace(/例如/g, '');
 
         wx.showToast({
-            title: `朗读: ${speakText.substring(0, 10)}...`,
+            title: '朗读: ' + speakText.substring(0, 10) + '...',
             icon: 'none',
             duration: 2000,
         });
     },
 
-    toggleRecord() {
-        const state = this.data.recordState;
+    checkRecordPermission: function (callback) {
+        var self = this;
+        wx.getSetting({
+            success: function (res) {
+                if (!res.authSetting['scope.record']) {
+                    wx.authorize({
+                        scope: 'scope.record',
+                        success: function () {
+                            callback(true);
+                        },
+                        fail: function () {
+                            wx.showModal({
+                                title: '需要麦克风权限',
+                                content: '请在设置中开启麦克风权限',
+                                showCancel: false,
+                            });
+                            callback(false);
+                        }
+                    });
+                } else {
+                    callback(true);
+                }
+            },
+            fail: function () {
+                callback(false);
+            }
+        });
+    },
+
+    toggleRecord: function () {
+        console.log('[RecordPage] 点击录音按钮，当前状态:', this.data.recordState);
+
+        var self = this;
+        var state = this.data.recordState;
 
         if (state === 'idle') {
-            this.startRecord();
+            this.checkRecordPermission(function (granted) {
+                if (granted) {
+                    self.startRecord();
+                }
+            });
         } else if (state === 'recording') {
-            this.stopRecord();
+            self.stopRecord();
         }
     },
 
-    startRecord() {
+    startRecord: function () {
+        console.log('[RecordPage] 开始录音');
         try {
-            const recorder = this.private.recorder;
+            var recorder = this._recorder;
             if (recorder) {
                 recorder.startRecording();
-                console.log('[RecordPage] 开始录音');
+            } else {
+                console.error('[RecordPage] 录音器未初始化');
+                wx.showToast({ title: '录音器未初始化', icon: 'none' });
             }
         } catch (err) {
+            console.error('[RecordPage] 启动录音异常:', err);
             wx.showToast({ title: '无法访问麦克风', icon: 'none' });
         }
     },
 
-    stopRecord() {
-        const recorder = this.private.recorder;
+    stopRecord: function () {
+        console.log('[RecordPage] 停止录音');
+        var recorder = this._recorder;
         if (recorder) {
             recorder.stopRecording();
-            console.log('[RecordPage] 请求停止录音');
+        } else {
+            console.error('[RecordPage] 录音器未初始化');
         }
     },
 
-    async uploadAudio(tempFilePath: string) {
+    uploadAudio: function (tempFilePath) {
+        var self = this;
         if (!tempFilePath) {
             wx.showToast({ title: '录音文件无效', icon: 'none' });
             this.setData({ recordState: 'idle', recordStatusText: '录音文件无效' });
@@ -215,43 +253,40 @@ Page({
         console.log('[RecordPage] 开始上传音频:', tempFilePath);
         this.setData({ showLoading: true, loadingText: '识别中…', recordState: 'processing' });
 
-        try {
-            const field = this.data.currentField;
-            console.log(`[RecordPage] 调用识别接口: ${field.key}`);
+        var field = this.data.currentField;
+        console.log('[RecordPage] 调用识别接口: ' + field.key);
 
-            const result = await transcribeAudio(tempFilePath, field.key, 'zh');
-
+        transcribeAudio(tempFilePath, field.key, 'zh').then(function (result) {
             console.log('[RecordPage] 识别成功:', result.text);
-            this.setData({
+            self.setData({
                 resultText: result.text || '',
                 suggestions: result.suggestions || [],
                 recordState: 'idle',
                 recordStatusText: '识别完成，可修改后继续',
                 showLoading: false,
             });
-        } catch (err: any) {
+        }).catch(function (err) {
             console.error('[RecordPage] 识别失败:', err.message);
             wx.showToast({ title: '识别失败: ' + err.message, icon: 'none', duration: 3000 });
-            this.setData({
+            self.setData({
                 recordState: 'idle',
                 recordStatusText: '识别失败，请重录',
                 showLoading: false,
             });
-        }
+        });
     },
 
-    onInputChange(e: any) {
+    onInputChange: function (e) {
         this.setData({ resultText: e.detail.value });
     },
 
-    applySuggestion(e: any) {
-        const text = e.currentTarget.dataset.text;
+    applySuggestion: function (e) {
+        var text = e.currentTarget.dataset.text;
         this.setData({ resultText: text, suggestions: [] });
     },
 
-    goPrev() {
-        const store = getStore();
-        const value = this.data.resultText.trim();
+    goPrev: function () {
+        var value = this.data.resultText.trim();
         saveField(this.data.currentField.key, value);
 
         if (this.data.fromSummary) {
@@ -265,18 +300,16 @@ Page({
         }
 
         if (this.data.fieldIndex > 0) {
-            const newIndex = this.data.fieldIndex - 1;
-            const newStore = getStore();
-            newStore.fieldIndex = newIndex;
+            var newIndex = this.data.fieldIndex - 1;
+            setFieldIndex(newIndex);
             this.renderField();
         } else if (this.data.phase === 'item') {
             navigateTo('itemlist');
         }
     },
 
-    goNext() {
-        const store = getStore();
-        const value = this.data.resultText.trim();
+    goNext: function () {
+        var value = this.data.resultText.trim();
         saveField(this.data.currentField.key, value);
 
         if (this.data.fromSummary) {
@@ -290,15 +323,16 @@ Page({
             return;
         }
 
-        const fields = this.data.phase === 'header' ? this.private.headerFields : this.private.itemFields;
+        var fields = this.data.phase === 'header' ? this._headerFields : this._itemFields;
 
         if (this.data.fieldIndex < fields.length - 1) {
-            store.fieldIndex = this.data.fieldIndex + 1;
+            var newIndex = this.data.fieldIndex + 1;
+            setFieldIndex(newIndex);
             this.renderField();
         } else {
             if (this.data.phase === 'header') {
                 startNewItem();
-                this.private.fields = this.private.itemFields;
+                this._fields = this._itemFields;
                 this.renderField();
             } else {
                 saveCurrentItem();
