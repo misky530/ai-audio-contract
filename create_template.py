@@ -64,7 +64,7 @@ bold_para(doc, "一、货物清单")
 COLS = ["序号", "货物名称及规格", "品牌", "数量", "单位", "单价（元）", "小计（元）"]
 COL_W = [1.2, 5.5, 2.5, 1.5, 1.2, 2.5, 2.5]
 
-gt = doc.add_table(rows=3, cols=len(COLS)); gt.style = "Table Grid"
+gt = doc.add_table(rows=5, cols=len(COLS)); gt.style = "Table Grid"
 
 # 表头行
 for i, (h, w) in enumerate(zip(COLS, COL_W)):
@@ -72,9 +72,14 @@ for i, (h, w) in enumerate(zip(COLS, COL_W)):
     c.paragraphs[0].runs[0].bold = True
     c.width = Cm(w)
 
-# 循环模板行（docxtpl: {%tr for %} 放在第一列）
-loop_row = [
-    "{%tr for item in items %}",
+# docxtpl {%tr for %} 必须独占一整行，该行会被替换为 jinja2 for 标签
+for_ctrl_row = ["{%tr for item in items %}"] + [""] * (len(COLS) - 1)
+for i, v in enumerate(for_ctrl_row):
+    gt.rows[1].cells[i].text = v
+
+# 数据行：此行会被 jinja2 for 循环重复渲染
+data_row = [
+    "{{item.序号}}",
     "{{item.货物名称}}",
     "{{item.品牌}}",
     "{{item.数量}}",
@@ -82,13 +87,18 @@ loop_row = [
     "{{item.单价}}",
     "{{item.小计}}",
 ]
-for i, v in enumerate(loop_row):
-    gt.rows[1].cells[i].text = v
+for i, v in enumerate(data_row):
+    gt.rows[2].cells[i].text = v
 
-# 合计行（{%tr endfor %} 放在第一列）
-total_row = ["{%tr endfor %}", "合    计", "", "", "", "", "{{合同金额数字}} 元"]
+# docxtpl {%tr endfor %} 必须独占一整行，该行会被替换为 jinja2 endfor 标签
+endfor_ctrl_row = ["{%tr endfor %}"] + [""] * (len(COLS) - 1)
+for i, v in enumerate(endfor_ctrl_row):
+    gt.rows[3].cells[i].text = v
+
+# 合计行（在 endfor 之后，正常渲染）
+total_row = ["", "合    计", "", "", "", "", "{{合同金额数字}} 元"]
 for i, v in enumerate(total_row):
-    c = gt.rows[2].cells[i]; c.text = v
+    c = gt.rows[4].cells[i]; c.text = v
     if i in (1, 6): c.paragraphs[0].runs[0].bold = True
 
 doc.add_paragraph()
