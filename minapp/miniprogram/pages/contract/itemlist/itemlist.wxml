@@ -1,0 +1,38 @@
+<navigation-bar title="语音采购合同" showBack="{{true}}" bindback="onBack"></navigation-bar>
+
+<view class="progress-wrap">
+  <view class="progress-bar" style="width: {{progress}}%;"></view>
+</view>
+<view class="step-label">{{stepLabel}}</view>
+
+<view class="card">
+  <view class="summary-title">货物清单</view>
+  <view id="itemListDisplay">
+    <view wx:if="{{itemList.length === 0}}" class="empty-tip">暂无货物，请添加</view>
+
+    <view wx:for="{{itemList}}" wx:key="index" class="item-card">
+      <view class="item-card-left">
+        <view class="item-index">{{index + 1}}</view>
+        <view class="item-info">
+          <view class="item-card-title">{{itemTitles[index]}}</view>
+          <view wx:if="{{itemDetails[index]}}" class="item-card-detail">{{itemDetails[index]}}</view>
+        </view>
+      </view>
+      <view class="item-card-right">
+        <view class="action-btns">
+          <view class="action-btn" bindtap="deleteItem" data-index="{{index}}">
+            <text class="action-icon">🗑️</text>
+          </view>
+          <view class="action-btn" bindtap="editItem" data-index="{{index}}">
+            <text class="action-icon">✏️</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="bottom-area">
+  <view class="btn btn-orange" bindtap="startNewItem">+ 添加商品</view>
+  <view class="btn btn-primary" bindtap="goToSummary">完成，确认所有信息 →</view>
+</view>
