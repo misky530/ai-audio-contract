@@ -129,3 +129,10 @@ set WHISPER_MODEL=tiny
 set WHISPER_DEVICE=cpu
 uvicorn main:app --reload --port 8000
 ```
+# compose run
+```
+docker compose build && docker compose up -d
+
+docker compose up -d --build
+
+```
