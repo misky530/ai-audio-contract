@@ -12,6 +12,7 @@ from mock_data import HEADER_FIELDS, ITEM_FIELDS, OUR_COMPANY, DEFAULTS, MOCK_VO
 from vocab import get_prompt
 from stt import transcribe_bytes, STT_BACKEND
 import knowledge as kb
+from pdf_extractor import pdf_bytes_list_to_contract_fields
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,6 +129,73 @@ def generate(req: VoiceInput):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
     )
+
+
+@app.post("/generate/from-pdf", summary="上传一个或多个报价单 PDF，自动提取字段并生成合同")
+async def generate_from_pdf(
+    files: list[UploadFile] = File(..., description="一个或多个报价单 PDF"),
+    contract_type: str = Form("采购合同"),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="请至少上传一个 PDF 文件")
+
+    pdf_bytes_list = []
+    for f in files:
+        if not f.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail=f"{f.filename} 不是 PDF 文件")
+        pdf_bytes_list.append(await f.read())
+
+    try:
+        voice_data, items = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"PDF 提取失败: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF 解析失败: {e}")
+
+    fields = auto_generate(voice_data, items or None)
+
+    try:
+        buf = generate_contract(contract_type, fields)
+    except (ValueError, FileNotFoundError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    filename = f"{contract_type}_{fields['合同编号']}.docx"
+    encoded  = urllib.parse.quote(filename)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
+    )
+
+
+@app.post("/generate/from-pdf/preview", summary="预览从 PDF 提取的字段（不生成合同）")
+async def preview_from_pdf(
+    files: list[UploadFile] = File(..., description="一个或多个报价单 PDF"),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="请至少上传一个 PDF 文件")
+
+    pdf_bytes_list = []
+    for f in files:
+        if not f.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail=f"{f.filename} 不是 PDF 文件")
+        pdf_bytes_list.append(await f.read())
+
+    try:
+        voice_data, items = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"PDF 提取失败: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF 解析失败: {e}")
+
+    fields = auto_generate(voice_data, items or None)
+    return {"extracted": voice_data, "items": items, "full_fields": fields}
 
 
 @app.post("/generate/mock", summary="mock 数据一键生成（测试）")
