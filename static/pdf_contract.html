@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>报价单转合同</title>
+<style>
+  :root {
+    --blue:   #1677ff;
+    --green:  #52c41a;
+    --red:    #ff4d4f;
+    --gray:   #8c8c8c;
+    --bg:     #f5f5f5;
+    --card:   #ffffff;
+    --radius: 12px;
+    --border: #e8e8e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+         background: var(--bg); color: #262626; min-height: 100dvh; }
+
+  .topbar { background: var(--blue); color: #fff; padding: 14px 16px 12px; }
+  .topbar h1 { font-size: 17px; font-weight: 600; }
+  .topbar p  { font-size: 12px; opacity: .8; margin-top: 3px; }
+
+  .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  .card { background: var(--card); border-radius: var(--radius);
+          padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #1a1a1a; }
+
+  /* 拖拽上传区 */
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 32px 16px; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .drop-zone.dragover { border-color: var(--blue); background: #e6f4ff; }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon { font-size: 40px; margin-bottom: 10px; }
+  .drop-hint { font-size: 14px; color: var(--gray); line-height: 1.6; }
+  .drop-hint strong { color: var(--blue); }
+
+  /* 文件列表 */
+  .file-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fafafa; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .file-icon { font-size: 22px; flex-shrink: 0; }
+  .file-name { flex: 1; font-size: 13px; word-break: break-all; }
+  .file-size { font-size: 12px; color: var(--gray); flex-shrink: 0; }
+  .file-del  { background: none; border: none; color: var(--red);
+               cursor: pointer; font-size: 18px; flex-shrink: 0; padding: 2px 4px; }
+
+  /* 预览区 */
+  .preview-section { display: none; }
+  .preview-section.show { display: block; }
+
+  .field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .field-row label { font-size: 12px; color: var(--gray); width: 90px; flex-shrink: 0; padding-top: 8px; }
+  .field-row input {
+    flex: 1; border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 14px; outline: none;
+    font-family: inherit;
+  }
+  .field-row input:focus { border-color: var(--blue); }
+
+  .section-sub { font-size: 13px; font-weight: 600; color: #555; margin: 14px 0 8px; }
+
+  .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .items-table th { background: #f5f5f5; padding: 7px 8px; text-align: left;
+                    font-weight: 600; border-bottom: 1px solid var(--border); }
+  .items-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  .items-table td input {
+    width: 100%; border: none; background: transparent; font-size: 13px;
+    font-family: inherit; outline: none; padding: 0;
+  }
+  .items-table td input:focus { border-bottom: 1px solid var(--blue); }
+
+  /* 按钮 */
+  .btn {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:active { opacity: .8; }
+  .btn-primary  { background: var(--blue);  color: #fff; }
+  .btn-success  { background: var(--green); color: #fff; }
+  .btn-disabled { background: #d9d9d9; color: #999; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+
+  /* 状态 */
+  .status {
+    display: none; padding: 12px 14px; border-radius: 8px;
+    font-size: 14px; margin-bottom: 14px; line-height: 1.5;
+  }
+  .status.loading { display: flex; align-items: center; gap: 10px;
+                    background: #e6f4ff; color: var(--blue); }
+  .status.error   { display: block; background: #fff2f0; color: var(--red); }
+
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(22,119,255,.3);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin .7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px;
+         font-size: 12px; font-weight: 500; }
+  .tag-blue   { background: #e6f4ff; color: var(--blue); }
+  .tag-green  { background: #f6ffed; color: var(--green); }
+  .tag-orange { background: #fff7e6; color: #fa8c16; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📄 报价单 → 采购合同</h1>
+  <p>上传一个或多个 PDF 报价单，自动提取字段并生成合同</p>
+</div>
+
+<div class="content">
+
+  <!-- 上传区 -->
+  <div class="card">
+    <div class="card-title">上传报价单</div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf" multiple>
+      <div class="drop-icon">📂</div>
+      <div class="drop-hint">
+        点击选择 PDF 文件，或拖拽到此处<br>
+        <strong>支持同时上传多个文件</strong>
+      </div>
+    </div>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- 状态提示 -->
+  <div class="status loading" id="statusLoading">
+    <div class="spinner"></div>
+    <span id="statusText">正在解析 PDF，请稍候…</span>
+  </div>
+  <div class="status error" id="statusError"></div>
+
+  <!-- 预览 & 编辑 -->
+  <div class="preview-section" id="previewSection">
+    <div class="card">
+      <div class="card-title">
+        字段预览
+        <span class="tag tag-green" style="margin-left:6px;float:right">可编辑</span>
+      </div>
+
+      <div class="section-sub">甲方信息</div>
+      <div class="field-row"><label>公司名称</label><input id="f_甲方名称" placeholder="买方公司全称"></div>
+      <div class="field-row"><label>联系人</label><input id="f_甲方联系人" placeholder="联系人姓名"></div>
+      <div class="field-row"><label>电话</label><input id="f_甲方电话" placeholder="联系电话"></div>
+      <div class="field-row"><label>地址</label><input id="f_甲方地址" placeholder="公司地址"></div>
+
+      <div class="section-sub">合同条款</div>
+      <div class="field-row"><label>税率 (%)</label><input id="f_税率" type="number" placeholder="13"></div>
+      <div class="field-row"><label>交货期 (天)</label><input id="f_交货期限" type="number" placeholder="120"></div>
+      <div class="field-row"><label>质保期 (月)</label><input id="f_质保期" type="number" placeholder="12"></div>
+      <div class="field-row"><label>预付款 (%)</label><input id="f_预付款比例" type="number" placeholder="50"></div>
+      <div class="field-row"><label>出厂验收 (%)</label><input id="f_出厂验收比例" type="number" placeholder="40"></div>
+      <div class="field-row"><label>到厂验收 (%)</label><input id="f_到厂验收比例" type="number" placeholder="10"></div>
+
+      <div class="section-sub">货物清单</div>
+      <div style="overflow-x:auto">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>#</th><th style="min-width:160px">货物名称</th>
+              <th style="min-width:60px">数量</th><th style="min-width:80px">单价(元)</th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnReparse" onclick="reparse()">重新解析</button>
+      <button class="btn btn-success" id="btnGenerate" onclick="generate()">生成合同 ↓</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';  // 同域，直接用相对路径
+
+let selectedFiles = [];
+
+// ── 文件选择 ──────────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileList  = document.getElementById('fileList');
+
+fileInput.addEventListener('change', e => addFiles([...e.target.files]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  addFiles([...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.pdf')));
+});
+
+function addFiles(newFiles) {
+  newFiles.forEach(f => {
+    if (!f.name.toLowerCase().endsWith('.pdf')) return;
+    if (!selectedFiles.find(x => x.name === f.name && x.size === f.size))
+      selectedFiles.push(f);
+  });
+  renderFileList();
+  if (selectedFiles.length) autoPreview();
+}
+
+function removeFile(idx) {
+  selectedFiles.splice(idx, 1);
+  renderFileList();
+  if (!selectedFiles.length) hidePreview();
+}
+
+function renderFileList() {
+  fileList.innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-item">
+      <span class="file-icon">📄</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${(f.size/1024).toFixed(0)} KB</span>
+      <button class="file-del" onclick="removeFile(${i})" title="移除">×</button>
+    </div>
+  `).join('');
+}
+
+// ── 自动预览（上传后立即解析）────────────────────────────────────────
+async function autoPreview() {
+  showLoading('正在解析 PDF，请稍候…');
+  hidePreview();
+  hideError();
+
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('files', f));
+
+  try {
+    const res = await fetch(`${API}/generate/from-pdf/preview`, { method: 'POST', body: fd });
+    if (!res.ok) { showError(await res.text()); return; }
+    const data = await res.json();
+    fillPreview(data);
+    showPreview();
+  } catch(e) {
+    showError('网络错误：' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function reparse() { if (selectedFiles.length) autoPreview(); }
+
+// ── 填充预览表单 ──────────────────────────────────────────────────────
+function fillPreview(data) {
+  const v = data.extracted || {};
+  const items = data.items || [];
+
+  const fields = ['甲方名称','甲方联系人','甲方电话','甲方地址',
+                  '税率','交货期限','质保期','预付款比例','出厂验收比例','到厂验收比例'];
+  fields.forEach(k => {
+    const el = document.getElementById('f_' + k);
+    if (el) el.value = v[k] || '';
+  });
+
+  const tbody = document.getElementById('itemsBody');
+  tbody.innerHTML = items.map((it, i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td><input value="${escHtml(it.货物品类 || '')}" data-idx="${i}" data-field="货物品类"></td>
+      <td><input value="${escHtml(qty(it.数量))}" data-idx="${i}" data-field="数量" style="width:60px"></td>
+      <td><input value="${escHtml(it.单价 || '')}" data-idx="${i}" data-field="单价" style="width:90px"></td>
+    </tr>
+  `).join('');
+}
+
+function qty(s) { return (s || '').replace(/台$/, ''); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── 生成合同 ──────────────────────────────────────────────────────────
+async function generate() {
+  if (!selectedFiles.length) return;
+  const btn = document.getElementById('btnGenerate');
+  btn.textContent = '生成中…';
+  btn.classList.replace('btn-success', 'btn-disabled');
+  hideError();
+
+  // 收集表单里用户可能修改过的值
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('files', f));
+  fd.append('contract_type', '采购合同');
+
+  // 把编辑后的字段作为 override 参数传给后端
+  const overrides = collectOverrides();
+  if (Object.keys(overrides).length)
+    fd.append('overrides', JSON.stringify(overrides));
+
+  try {
+    const res = await fetch(`${API}/generate/from-pdf`, { method: 'POST', body: fd });
+    if (!res.ok) { showError(await res.text()); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = decodeURIComponent(
+      (res.headers.get('Content-Disposition') || '').match(/filename\*=UTF-8''(.+)/)?.[1] || '采购合同.docx'
+    );
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    showError('网络错误：' + e.message);
+  } finally {
+    btn.textContent = '生成合同 ↓';
+    btn.classList.replace('btn-disabled', 'btn-success');
+  }
+}
+
+function collectOverrides() {
+  const keys = ['甲方名称','甲方联系人','甲方电话','甲方地址',
+                 '税率','交货期限','质保期','预付款比例','出厂验收比例','到厂验收比例'];
+  const out = {};
+  keys.forEach(k => {
+    const el = document.getElementById('f_' + k);
+    if (el && el.value.trim()) out[k] = el.value.trim();
+  });
+  // items
+  const rows = document.querySelectorAll('#itemsBody tr');
+  if (rows.length) {
+    out._items = [...rows].map(tr => {
+      const inputs = tr.querySelectorAll('input');
+      return { 货物品类: inputs[0]?.value||'', 货物品牌:'', 货物型号:'', 货物规格:'',
+               数量: (inputs[1]?.value||'1')+'台', 单价: inputs[2]?.value||'' };
+    });
+  }
+  return out;
+}
+
+// ── UI 工具 ───────────────────────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusLoading').style.display = 'flex';
+}
+function hideLoading() { document.getElementById('statusLoading').style.display = 'none'; }
+function showError(msg) {
+  const el = document.getElementById('statusError');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideError() { document.getElementById('statusError').style.display = 'none'; }
+function showPreview() { document.getElementById('previewSection').classList.add('show'); }
+function hidePreview() { document.getElementById('previewSection').classList.remove('show'); }
+</script>
+</body>
+</html>

@@ -135,6 +135,7 @@ def generate(req: VoiceInput):
 async def generate_from_pdf(
     files: list[UploadFile] = File(..., description="一个或多个报价单 PDF"),
     contract_type: str = Form("采购合同"),
+    overrides: str = Form("", description="JSON 字符串，可覆盖提取的字段（前端编辑后提交）"),
 ):
     if not files:
         raise HTTPException(status_code=400, detail="请至少上传一个 PDF 文件")
@@ -154,6 +155,16 @@ async def generate_from_pdf(
     except Exception as e:
         logger.error(f"PDF 提取失败: {e}")
         raise HTTPException(status_code=500, detail=f"PDF 解析失败: {e}")
+
+    # 合并前端覆盖值
+    if overrides:
+        import json as _json
+        try:
+            ov = _json.loads(overrides)
+            items = ov.pop("_items", items)
+            voice_data.update({k: v for k, v in ov.items() if v})
+        except Exception:
+            pass
 
     fields = auto_generate(voice_data, items or None)
 

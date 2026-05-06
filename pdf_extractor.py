@@ -91,10 +91,16 @@ def _parse_one(pdf_bytes: bytes) -> dict:
     if m:
         result["交货期限"] = _months_to_days(m.group(1))
 
-    # 预付款比例  "预付款 50%"
+    # 付款条款  "预付款 50%,出厂前验收40%，到厂验收后10%"
     m = re.search(r"预付款\s*(\d+)\s*%", full_text)
     if m:
         result["预付款比例"] = m.group(1)
+    m = re.search(r"出厂[前]?验收\s*(\d+)\s*%", full_text)
+    if m:
+        result["出厂验收比例"] = m.group(1)
+    m = re.search(r"到厂验收后?\s*(\d+)\s*%", full_text)
+    if m:
+        result["到厂验收比例"] = m.group(1)
 
     # 税率  "13%增值税"
     m = re.search(r"(\d+)\s*%\s*增值税", full_text)
@@ -179,7 +185,8 @@ def pdf_bytes_list_to_contract_fields(pdf_bytes_list: list[bytes]) -> tuple[dict
                   if not k.startswith("乙方") and v}
 
     # 条款字段透传
-    for key in ("质保期", "交货期限", "预付款比例", "税率", "运费承担方", "交货地点"):
+    for key in ("质保期", "交货期限", "预付款比例", "出厂验收比例", "到厂验收比例",
+                "税率", "运费承担方", "交货地点"):
         if key in merged and merged[key]:
             voice_data[key] = merged[key]
 

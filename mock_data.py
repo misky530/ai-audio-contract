@@ -48,6 +48,8 @@ DEFAULTS = {
     "质保期":           "12",
     "预付款比例":       "30",
     "预付款天数":       "5",
+    "出厂验收比例":     "60",
+    "到厂验收比例":     "10",
     "到货付款天数":     "10",
     "验收期限":         "5",
     "整改期限":         "15",
@@ -177,12 +179,18 @@ def auto_generate(voice_input: dict, items: list = None) -> dict:
         fields["合同金额大写"] = 数字转大写(str(total_amount))
         税率  = float(fields.get("税率", "13")) / 100
         fields["税额"] = f"{total_amount * 税率 / (1 + 税率):,.2f}"
-        预付  = total_amount * float(fields.get("预付款比例", "30")) / 100
-        fields["预付款金额"] = f"{预付:,.2f}"
-        fields["余款金额"]   = f"{total_amount - 预付:,.2f}"
+        预付比  = float(fields.get("预付款比例",   "30")) / 100
+        出厂比  = float(fields.get("出厂验收比例", "60")) / 100
+        到厂比  = float(fields.get("到厂验收比例", "10")) / 100
+        fields["预付款金额"]   = f"{total_amount * 预付比:,.2f}"
+        fields["出厂验收金额"] = f"{total_amount * 出厂比:,.2f}"
+        fields["到厂验收金额"] = f"{total_amount * 到厂比:,.2f}"
+        # 兼容旧字段
+        fields["余款金额"] = f"{total_amount * (1 - 预付比):,.2f}"
     else:
         fields["合同金额数字"] = fields["合同金额大写"] = ""
         fields["税额"] = fields["预付款金额"] = fields["余款金额"] = ""
+        fields["出厂验收金额"] = fields["到厂验收金额"] = ""
 
     if not fields.get("交货地点"):
         fields["交货地点"] = fields.get("甲方地址") or "甲方指定地点"
