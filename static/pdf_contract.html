@@ -100,9 +100,9 @@
     display: none; padding: 12px 14px; border-radius: 8px;
     font-size: 14px; margin-bottom: 14px; line-height: 1.5;
   }
-  .status.loading { display: flex; align-items: center; gap: 10px;
+  .status-loading { align-items: center; gap: 10px;
                     background: #e6f4ff; color: var(--blue); }
-  .status.error   { display: block; background: #fff2f0; color: var(--red); }
+  .status-error   { background: #fff2f0; color: var(--red); }
 
   .spinner {
     width: 18px; height: 18px; border: 2px solid rgba(22,119,255,.3);
@@ -142,11 +142,11 @@
   </div>
 
   <!-- 状态提示 -->
-  <div class="status loading" id="statusLoading">
+  <div class="status status-loading" id="statusLoading">
     <div class="spinner"></div>
     <span id="statusText">正在解析 PDF，请稍候…</span>
   </div>
-  <div class="status error" id="statusError"></div>
+  <div class="status status-error" id="statusError"></div>
 
   <!-- 预览 & 编辑 -->
   <div class="preview-section" id="previewSection">
@@ -350,7 +350,8 @@ function collectOverrides() {
 // ── UI 工具 ───────────────────────────────────────────────────────────
 function showLoading(msg) {
   document.getElementById('statusText').textContent = msg;
-  document.getElementById('statusLoading').style.display = 'flex';
+  const el = document.getElementById('statusLoading');
+  el.style.display = 'flex';
 }
 function hideLoading() { document.getElementById('statusLoading').style.display = 'none'; }
 function showError(msg) {
