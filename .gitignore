@@ -1,6 +1,5 @@
 ﻿__pycache__/
 __pycache__1/
-.env
 *.pyc
 ngrok.log
 test_audio/

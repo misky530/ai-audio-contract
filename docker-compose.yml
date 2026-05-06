@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      pull_policy: if_not_present
+    build: .
     restart: unless-stopped
     ports:
       - "28083:8000"
