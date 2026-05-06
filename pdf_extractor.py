@@ -115,80 +115,94 @@ def _parse_one(pdf_bytes: bytes) -> dict:
             result["运费承担方"] = "乙方"
             result["交货地点"]   = "甲方指定地点"
 
-    # ── 货物列表（主报价表，跳过 Break Down 明细表）────────────────────
+    # ── 货物列表 & 设备明细 ───────────────────────────────────────────────
     items = []
+    breakdown_items = []
+
     for table in all_tables:
         if not table:
             continue
-        # Break Down 明细表：首行含 'Break Down'
         header = table[0]
-        if any("Break Down" in str(c) for c in header):
-            continue
-        # 主货物表：行格式 [seq, model, description, qty, unit_price, total]
+        is_breakdown = any("Break Down" in str(c) for c in header)
+
         for row in table:
             if not row or len(row) < 4:
                 continue
             seq, *rest = row
-            # seq 必须是纯数字
             if not str(seq or "").strip().isdigit():
                 continue
-            # 根据列数解析
-            if len(rest) >= 4:
-                # [model_or_desc, desc, qty, price, ...]  (6 列含型号)
-                model = str(rest[0] or "").strip()
-                desc  = str(rest[1] or "").strip()
-                qty   = str(rest[2] or "1").strip()
-                price = _clean_price(rest[3])
-                name  = f"{model} {desc}".strip() if model else desc
-            else:
-                # [desc, qty, price, ...]  (4-5 列无型号)
-                desc  = str(rest[0] or "").strip()
+
+            if is_breakdown:
+                # Break Down：[seq, name, qty, unit_price, total]
+                name  = str(rest[0] or "").strip()
                 qty   = str(rest[1] or "1").strip()
                 price = _clean_price(rest[2]) if len(rest) > 2 else ""
-                name  = desc
+                total = _clean_price(rest[3]) if len(rest) > 3 else ""
+                if name:
+                    breakdown_items.append({
+                        "序号": seq.strip(),
+                        "组件名称": name,
+                        "数量": qty,
+                        "单价": f"{float(price):,.2f}" if price else "",
+                        "小计": f"{float(total):,.2f}" if total else "",
+                    })
+            else:
+                # 主报价表：[model, desc, qty, price, total] 或 [desc, qty, price, total]
+                if len(rest) >= 4:
+                    model = str(rest[0] or "").strip()
+                    desc  = str(rest[1] or "").strip()
+                    qty   = str(rest[2] or "1").strip()
+                    price = _clean_price(rest[3])
+                    name  = f"{model} {desc}".strip() if model else desc
+                else:
+                    desc  = str(rest[0] or "").strip()
+                    qty   = str(rest[1] or "1").strip()
+                    price = _clean_price(rest[2]) if len(rest) > 2 else ""
+                    name  = desc
+                if name:
+                    items.append({
+                        "货物品类": name,
+                        "货物品牌": "",
+                        "货物型号": "",
+                        "货物规格": "",
+                        "数量":     f"{qty}台",
+                        "单价":     price,
+                    })
 
-            if name:
-                items.append({
-                    "货物品类": name,
-                    "货物品牌": "",
-                    "货物型号": "",
-                    "货物规格": "",
-                    "数量":     f"{qty}台",
-                    "单价":     price,
-                })
-
-    result["_items"] = items
+    result["_items"]     = items
+    result["_breakdown"] = breakdown_items
     return result
 
 
 # ── 多 PDF 合并 ───────────────────────────────────────────────────────
 
-def pdf_bytes_list_to_contract_fields(pdf_bytes_list: list[bytes]) -> tuple[dict, list]:
+def pdf_bytes_list_to_contract_fields(pdf_bytes_list: list[bytes]) -> tuple[dict, list, list]:
     """
-    主入口：解析一个或多个报价单 PDF，返回 (voice_data, items)。
-    多个 PDF 的 items 会合并；甲乙方信息取第一个有值的文档。
+    主入口：解析一个或多个报价单 PDF。
+    返回 (voice_data, items, breakdown_items)。
+    多个 PDF 的 items/breakdown 会合并；甲乙方信息取第一个有值的文档。
     """
     all_items: list[dict] = []
+    all_breakdown: list[dict] = []
     merged: dict = {}
 
     for pdf_bytes in pdf_bytes_list:
-        parsed = _parse_one(pdf_bytes)
-        items  = parsed.pop("_items", [])
+        parsed    = _parse_one(pdf_bytes)
+        items     = parsed.pop("_items", [])
+        breakdown = parsed.pop("_breakdown", [])
         all_items.extend(items)
-        # header 字段：不覆盖已有值（优先第一份 PDF）
+        all_breakdown.extend(breakdown)
         for k, v in parsed.items():
             if v and k not in merged:
                 merged[k] = v
 
-    # 乙方信息不传给 auto_generate（系统 OUR_COMPANY 是固定乙方）
     voice_data = {k: v for k, v in merged.items()
                   if not k.startswith("乙方") and v}
 
-    # 条款字段透传
     for key in ("质保期", "交货期限", "预付款比例", "出厂验收比例", "到厂验收比例",
                 "税率", "运费承担方", "交货地点"):
         if key in merged and merged[key]:
             voice_data[key] = merged[key]
 
-    logger.info(f"PDF 提取完成：{len(all_items)} 个货物，字段={list(voice_data.keys())}")
-    return voice_data, all_items
+    logger.info(f"PDF 提取完成：{len(all_items)} 个货物，{len(all_breakdown)} 个明细，字段={list(voice_data.keys())}")
+    return voice_data, all_items, all_breakdown

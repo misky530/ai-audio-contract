@@ -158,6 +158,45 @@ for i, v in enumerate(total_row):
 
 doc.add_paragraph()
 
+# ── 附：设备组成明细（条件显示，breakdown_items 非空时渲染）────────────
+# docxtpl 条件块：{%p if breakdown_items %} ... {%p endif %}
+p_if = doc.add_paragraph()
+p_if.paragraph_format.space_before = Pt(0)
+p_if.paragraph_format.space_after  = Pt(0)
+add_run(p_if, "{%p if breakdown_items %}", size_pt=1)  # 不可见占位行
+
+bold_para(doc, "附：设备组成明细")
+
+BD_COLS  = ["序号", "组件名称", "数量", "单价（元）", "小计（元）"]
+BD_COL_W = [1.2,    8.5,        1.5,    2.5,           2.5]
+
+bdt = doc.add_table(rows=4, cols=len(BD_COLS))
+bdt.style = "Table Grid"
+
+for i, (h, w) in enumerate(zip(BD_COLS, BD_COL_W)):
+    c = bdt.rows[0].cells[i]
+    set_cell_text(c, h, bold=True)
+    c.width = Cm(w)
+
+bd_for = ["{%tr for bd in breakdown_items %}"] + [""] * (len(BD_COLS) - 1)
+for i, v in enumerate(bd_for):
+    set_cell_text(bdt.rows[1].cells[i], v)
+
+bd_data = ["{{bd.序号}}", "{{bd.组件名称}}", "{{bd.数量}}", "{{bd.单价}}", "{{bd.小计}}"]
+for i, v in enumerate(bd_data):
+    set_cell_text(bdt.rows[2].cells[i], v)
+
+bd_endfor = ["{%tr endfor %}"] + [""] * (len(BD_COLS) - 1)
+for i, v in enumerate(bd_endfor):
+    set_cell_text(bdt.rows[3].cells[i], v)
+
+doc.add_paragraph()
+
+p_endif = doc.add_paragraph()
+p_endif.paragraph_format.space_before = Pt(0)
+p_endif.paragraph_format.space_after  = Pt(0)
+add_run(p_endif, "{%p endif %}", size_pt=1)
+
 # ── 二、合同金额 ──────────────────────────────────────────────────────
 bold_para(doc, "二、合同金额")
 clause(doc, "合同总价款人民币（大写）{{合同金额大写}}，小写 ¥{{合同金额数字}} 元，"

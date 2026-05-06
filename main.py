@@ -147,7 +147,7 @@ async def generate_from_pdf(
         pdf_bytes_list.append(await f.read())
 
     try:
-        voice_data, items = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
+        voice_data, items, breakdown = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
@@ -166,7 +166,7 @@ async def generate_from_pdf(
         except Exception:
             pass
 
-    fields = auto_generate(voice_data, items or None)
+    fields = auto_generate(voice_data, items or None, breakdown or None)
 
     try:
         buf = generate_contract(contract_type, fields)
@@ -196,7 +196,7 @@ async def preview_from_pdf(
         pdf_bytes_list.append(await f.read())
 
     try:
-        voice_data, items = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
+        voice_data, items, breakdown = pdf_bytes_list_to_contract_fields(pdf_bytes_list)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
@@ -205,8 +205,8 @@ async def preview_from_pdf(
         logger.error(f"PDF 提取失败: {e}")
         raise HTTPException(status_code=500, detail=f"PDF 解析失败: {e}")
 
-    fields = auto_generate(voice_data, items or None)
-    return {"extracted": voice_data, "items": items, "full_fields": fields}
+    fields = auto_generate(voice_data, items or None, breakdown or None)
+    return {"extracted": voice_data, "items": items, "breakdown": breakdown, "full_fields": fields}
 
 
 @app.post("/generate/mock", summary="mock 数据一键生成（测试）")

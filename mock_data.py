@@ -136,7 +136,7 @@ def _process_item(item: dict, index: int) -> tuple:
 
 
 # ── 6. 核心：合并所有字段 ─────────────────────────────────────────────
-def auto_generate(voice_input: dict, items: list = None) -> dict:
+def auto_generate(voice_input: dict, items: list = None, breakdown: list = None) -> dict:
     """
     voice_input : 甲方信息等 header 字段
     items       : 货物列表，每项含 货物品牌/型号/品类/规格/数量/单价
@@ -195,6 +195,7 @@ def auto_generate(voice_input: dict, items: list = None) -> dict:
     if not fields.get("交货地点"):
         fields["交货地点"] = fields.get("甲方地址") or "甲方指定地点"
 
+    fields["breakdown_items"] = breakdown or []
     fields["合同编号"] = 生成合同编号()
     fields["签署日期"] = date.today().strftime("%Y年%m月%d日")
     return fields
